@@ -1,0 +1,174 @@
+.insta-otp-submit{background:var(--insta-red);color:var(--insta-btn-text);border:none;padding:12px 48px;border-radius:28px;font-weight:800;cursor:pointer}
+.ui-input-wrapper{margin-bottom:12px;font-family:inherit}
+.ui-input-label{display:block;margin-bottom:6px;font-size:15px;font-family:'Poppins', sans-serif;font-weight:400;color:var(--insta-text)}
+.ui-input-field{position:relative}
+.ui-input{width:100%;padding:10px 12px;border:1px solid var(--insta-border);border-radius:6px;font-size:14px;background:var(--insta-card-bg);color:var(--insta-text)}
+.ui-input::placeholder{color:var(--insta-muted)}
+.ui-input.error{border-color:var(--insta-red)}
+.ui-input-error{color:var(--insta-red);font-size:12px;margin-top:6px}
+
+/* Page-level Instainsure-like styles */
+@import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&display=swap');
+
+:root{
+	/* Instainsure-inspired colors copied and mapped to CSS vars */
+	--insta-bg: #eef6fb; /* light blue background */
+	--insta-card-bg: #ffffff;
+	--insta-primary: #005e9e; /* main blue */
+	--insta-accent: #15396a; /* dark navy */
+	--insta-btn-text: #ffffff;
+	--insta-muted: #8a93a5;
+	--insta-red: #ed1c24;
+	--insta-border: #dedede;
+	--insta-text: #15396a;
+}
+
+/* Global font normalization so all inputs/controls use Poppins */
+html, body, #root {
+  font-family: 'Poppins', system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial;
+}
+
+/* Ensure form controls inherit the same font and color */
+input, select, textarea, button, label, .MuiInputBase-root, .MuiFormControl-root {
+  font-family: inherit;
+  color: var(--insta-text);
+}
+
+/* MUI FormLabel (used for radio buttons) - standardize to 15px Poppins */
+.MuiFormLabel-root {
+  font-family: 'Poppins', sans-serif !important;
+  font-size: 15px !important;
+  font-weight: 400 !important;
+  color: var(--insta-text) !important;
+  margin-bottom: 8px;
+}
+
+/* Make MUI typography use Poppins where possible */
+.MuiTypography-root { font-family: inherit; }
+
+.insta-page{
+	font-family: 'Poppins', system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial;
+	background-color: var(--insta-bg);
+	min-height: 100vh;
+	padding: 32px 0;
+	color: #111827;
+}
+
+.insta-card{
+	background: var(--insta-card-bg);
+	border-radius: 12px;
+	padding: 24px;
+	box-shadow: 0 6px 24px rgba(15,23,42,0.06);
+}
+
+.insta-header-chip{
+	display: inline-block;
+	background: linear-gradient(90deg,var(--insta-primary),var(--insta-accent));
+	color: var(--insta-btn-text);
+	padding: 8px 14px;
+	border-radius: 999px;
+	font-weight: 600;
+}
+
+.insta-button{
+	background: linear-gradient(90deg,var(--insta-red), #c2181a);
+	color: var(--insta-btn-text);
+	border: none;
+	padding: 12px 22px;
+	border-radius: 10px;
+	font-weight: 600;
+	cursor: pointer;
+	box-shadow: 0 6px 18px rgba(237,28,36,0.18);
+}
+.insta-button[disabled]{
+	opacity: 0.6;
+	cursor: not-allowed;
+}
+
+/* Tabs used in place of radio options */
+.insta-tabs{display:flex;gap:10px;flex-wrap:wrap}
+.insta-tab{padding:10px 16px;border-radius:6px;background:#ffffff;border:1px solid var(--insta-border);cursor:pointer;font-weight:600;color:var(--insta-text);font-size:13px}
+.insta-tab.active{background:transparent;color:var(--insta-primary);border-color:var(--insta-primary);box-shadow:none}
+
+/* show a small checkbox indicator on active tab */
+.insta-tab.active::before{
+	content: "\2713"; /* check mark */
+	display:inline-block;
+	width:16px;height:16px;line-height:16px;text-align:center;margin-right:8px;border-radius:3px;background:var(--insta-primary);color:var(--insta-btn-text);font-size:11px;font-weight:700
+}
+
+/* Page header similar to Instainsure */
+.insta-page-header{
+	background: linear-gradient(180deg, rgba(5,57,110,0.06), rgba(234,241,248,0.2));
+	padding: 28px 24px;
+	border-radius: 8px;
+	margin-bottom: 18px;
+	display:flex;gap:20px;align-items:center
+}
+.insta-header-icon{width:72px;height:72px;border-radius:50%;background:#fff;display:flex;align-items:center;justify-content:center;box-shadow:0 6px 18px rgba(15,23,42,0.06)}
+.insta-header-title{font-size:32px;font-weight:800;color:var(--insta-primary);line-height:1}
+.insta-header-sub{color:var(--insta-muted);margin-top:6px}
+.insta-header-underline{width:46px;height:4px;background:var(--insta-red);margin-top:8px;border-radius:2px}
+
+/* Small utility */
+.insta-section{margin-bottom:18px}
+
+/* Footer bar with back + proceed */
+.insta-footer{
+	position: fixed;
+	left: 0;
+	right: 0;
+	bottom: 0;
+	background: #fff;
+	border-top: 1px solid var(--insta-border);
+	padding: 14px 20px;
+	display: flex;
+	justify-content: space-between;
+	align-items: center;
+	z-index: 1200;
+}
+.insta-back{display:flex;align-items:center;gap:8px;color:var(--insta-primary);font-weight:600;cursor:pointer}
+.insta-proceed{background:var(--insta-red);color:var(--insta-btn-text);border:none;padding:12px 26px;border-radius:8px;font-weight:700;cursor:pointer}
+.insta-proceed:disabled{opacity:0.5;cursor:not-allowed}
+
+/* Form card tweaks to match Instainsure spacing */
+.insta-card{padding:28px}
+.insta-input-note{color:var(--insta-muted);font-size:13px;margin-top:8px}
+
+/* Sub-question styling: match parent question typography and spacing */
+.insta-child{
+	font-family: 'Poppins', sans-serif;
+	color: var(--insta-text);
+}
+.insta-child .ui-input-label{
+	color: var(--insta-text);
+	font-size: 15px;
+	font-family: 'Poppins', sans-serif;
+	font-weight: 400;
+}
+.insta-child .ui-input{
+	background: var(--insta-card-bg);
+	border: 1px solid var(--insta-border);
+	color: var(--insta-text);
+}
+.insta-child .ui-input-error{color:var(--insta-red)}
+
+/* Numbered list style for listItems provided by admin */
+.insta-numbered-list{
+	margin: 12px 0 6px 20px;
+	color: var(--insta-text);
+	font-size: 16px;
+	line-height: 1.6;
+}
+.insta-numbered-list li{margin-bottom:8px}
+
+/* OTP panel styles to match screenshot */
+.insta-otp-panel{background:linear-gradient(180deg, #ffffff, #fafafa);padding:28px;border-radius:8px;border:1px solid rgba(0,0,0,0.03);box-shadow:0 6px 24px rgba(15,23,42,0.04);text-align:center}
+.insta-otp-panel .insta-otp-title{font-size:18px;color:var(--insta-primary);font-weight:700;margin-bottom:6px}
+.insta-otp-panel .insta-otp-sub{color:var(--insta-red);font-weight:700;margin-bottom:14px}
+.insta-otp-row{display:flex;justify-content:center;gap:14px;margin-bottom:18px}
+.insta-otp-input{width:48px;height:48px;border-radius:8px;border:2px solid var(--insta-primary);font-size:24px;text-align:center;background:#fff}
+.insta-otp-resend{color:var(--insta-muted);margin-top:8px}
+.insta-otp-submit{background:var(--insta-red);color:var(--insta-btn-text);border:none;padding:12px 48px;border-radius:28px;font-weight:800;cursor:pointer}
+

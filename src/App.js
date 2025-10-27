@@ -5,6 +5,11 @@ import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-d
 import LoginPage from './pages/LoginPage';
 import AdminDashboard from './pages/AdminDashboard';
 import UserForm from './pages/UserForm';
+import CategoryEntry from './pages/CategoryEntry';
+import ReviewPage from './pages/ReviewPage';
+import SubmittedSuccess from './pages/SubmittedSuccess';
+import { Provider } from 'react-redux';
+import store from './store';
 import ProtectedRoute from './components/ProtectedRoute';
 
 const theme = createTheme({
@@ -34,6 +39,7 @@ function App() {
   return (
     <ThemeProvider theme={theme}>
       <CssBaseline />
+      <Provider store={store}>
       <Router>
         <Routes>
           {/* Redirect root to login */}
@@ -52,13 +58,14 @@ function App() {
             }
           />
           
-          {/* Public user form routes by category */}
-          <Route path="/Health" element={<UserForm />} />
-          <Route path="/Travel" element={<UserForm />} />
-          <Route path="/Occupation" element={<UserForm />} />
-          <Route path="/Avocation" element={<UserForm />} />
+          {/* Public user form routes - dynamic category route */}
+          <Route path="/:category" element={<CategoryEntry />} />
+          <Route path="/:category/form" element={<UserForm />} />
+          <Route path="/review" element={<ReviewPage />} />
+          <Route path="/submitted" element={<SubmittedSuccess />} />
         </Routes>
       </Router>
+      </Provider>
     </ThemeProvider>
   );
 }

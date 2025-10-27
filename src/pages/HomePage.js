@@ -32,7 +32,7 @@ import {
   Delete as DeleteIcon,
   FilterList as FilterIcon,
 } from '@mui/icons-material';
-import { formsAPI } from '../services/api';
+import { formsAPI, categoriesAPI } from '../services/api';
 import FormBuilder from '../components/FormBuilder';
 import FormEditor from '../components/FormEditor';
 import DynamicForm from '../components/DynamicForm';
@@ -53,10 +53,28 @@ const HomePage = () => {
   const [showQuestionAdder, setShowQuestionAdder] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState(null);
   const [targetFormForQuestion, setTargetFormForQuestion] = useState(null);
+  const [categories, setCategories] = useState([]);
 
   useEffect(() => {
     fetchForms();
+    fetchCategories();
   }, []);
+
+  const fetchCategories = async () => {
+    try {
+      const response = await categoriesAPI.getAll();
+      setCategories(response.data);
+    } catch (err) {
+      console.error('Error fetching categories:', err);
+      // Initialize default categories if fetch fails
+      setCategories([
+        { name: 'Health' },
+        { name: 'Travel' },
+        { name: 'Occupation' },
+        { name: 'Avocation' }
+      ]);
+    }
+  };
 
   const fetchForms = async () => {
     try {
@@ -321,10 +339,11 @@ const HomePage = () => {
               label="Filter by Category"
             >
               <MenuItem value="All">All Categories</MenuItem>
-              <MenuItem value="Health">Health</MenuItem>
-              <MenuItem value="Travel">Travel</MenuItem>
-              <MenuItem value="Occupation">Occupation</MenuItem>
-              <MenuItem value="Avocation">Avocation</MenuItem>
+              {categories.map((cat) => (
+                <MenuItem key={cat._id || cat.name} value={cat.name}>
+                  {cat.name}
+                </MenuItem>
+              ))}
             </Select>
           </FormControl>
           <Typography variant="body2" color="text.secondary">

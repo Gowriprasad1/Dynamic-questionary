@@ -22,6 +22,8 @@ import {
 } from '@mui/material';
 // Date picker imports removed - using simple HTML date input instead
 import { formsAPI, submissionsAPI } from '../services/api';
+import '../ui/insta/_form.scss';
+import { InputField, DateField, SelectField, CheckboxGroup, TextAreaField } from '../ui/insta/_form';
 
 const DynamicForm = ({ formId, onSuccess }) => {
   const [form, setForm] = useState(null);
@@ -323,9 +325,19 @@ const DynamicForm = ({ formId, onSuccess }) => {
   const renderQuestion = (question, showNumber = true) => {
     const value = formData[question.questionId] || '';
     const isRequired = question.validator_values?.required || false;
-    const questionLabel = showNumber && question.questionNumber 
-      ? `${question.questionNumber}. ${question.question}` 
+    const baseLabel = showNumber && question.questionNumber
+      ? `${question.questionNumber}. ${question.question}`
       : question.question;
+
+    // If admin provided listItems (array), render them as an ordered list after the main label
+    const afterLabel = (question.listItems && question.listItems.length > 0) ? (
+      <ol className="insta-numbered-list">
+        {question.listItems.map((it, i) => (
+          <li key={i} dangerouslySetInnerHTML={{ __html: it }} />
+        ))}
+      </ol>
+    ) : null;
+    const labelText = baseLabel;
 
     switch (question.option_type) {
       case 'text':
@@ -362,87 +374,65 @@ const DynamicForm = ({ formId, onSuccess }) => {
         }
         
         return (
-          <TextField
+          <InputField
             fullWidth
             type={question.option_type}
-            label={questionLabel}
+            label={labelText}
+            afterLabel={afterLabel}
             name={question.questionId}
             value={value}
-            onChange={(e) => handleInputChange(question.questionId, e.target.value)}
+            onChange={(v) => handleInputChange(question.questionId, v)}
             required={isRequired}
-            variant="outlined"
-            margin="normal"
-            inputProps={inputProps}
-            helperText={fieldErrors[question.questionId] || helperText || undefined}
-            error={!!fieldErrors[question.questionId]}
+            placeholder={question.placeholder || ''}
+            min={inputProps.min}
+            max={inputProps.max}
+            error={fieldErrors[question.questionId]}
           />
         );
 
       case 'textarea':
         return (
-          <TextField
-            fullWidth
-            multiline
-            rows={4}
-            label={questionLabel}
-            name={question.questionId}
+          <TextAreaField
+            label={labelText}
+            afterLabel={afterLabel}
             value={value}
-            onChange={(e) => handleInputChange(question.questionId, e.target.value)}
-            required={isRequired}
-            variant="outlined"
-            margin="normal"
-            inputProps={{
-              maxLength: question.validators?.maxLength?.value || undefined,
-              minLength: question.validators?.minLength?.value || undefined
-            }}
-            helperText={
-              fieldErrors[question.questionId] || 
-              (question.validators?.maxLength?.value 
-                ? `Maximum ${question.validators.maxLength.value} characters`
-                : undefined)
-            }
-            error={!!fieldErrors[question.questionId]}
+            onChange={(v) => handleInputChange(question.questionId, v)}
+            rows={4}
+            error={fieldErrors[question.questionId]}
+            placeholder={question.placeholder || ''}
           />
         );
 
       case 'select':
         return (
-          <FormControl fullWidth margin="normal" required={isRequired} error={!!fieldErrors[question.questionId]}>
-            <InputLabel>{questionLabel}</InputLabel>
-            <Select
-              value={value}
-              onChange={(e) => handleInputChange(question.questionId, e.target.value)}
-              label={questionLabel}
-            >
-              {question.options?.map((option, index) => (
-                <MenuItem key={index} value={option.val}>
-                  {option.val}
-                </MenuItem>
-              ))}
-            </Select>
-            {fieldErrors[question.questionId] && (
-              <FormHelperText error>{fieldErrors[question.questionId]}</FormHelperText>
-            )}
-          </FormControl>
+          <SelectField
+            label={labelText}
+            afterLabel={afterLabel}
+            value={value}
+            onChange={(v) => handleInputChange(question.questionId, v)}
+            options={question.options || []}
+            error={fieldErrors[question.questionId]}
+            name={question.questionId}
+          />
         );
 
       case 'radio':
         return (
           <FormControl component="fieldset" margin="normal" required={isRequired} error={!!fieldErrors[question.questionId]}>
-            <FormLabel component="legend">{questionLabel}</FormLabel>
-            <RadioGroup
-              value={value}
-              onChange={(e) => handleInputChange(question.questionId, e.target.value)}
-            >
+            <FormLabel component="legend">{labelText}</FormLabel>
+            {afterLabel}
+            <div className="insta-tabs" role="tablist" aria-label={typeof labelText === 'string' ? labelText : question.questionId}>
               {question.options?.map((option, index) => (
-                <FormControlLabel
+                <button
+                  type="button"
                   key={index}
-                  value={option.val}
-                  control={<Radio />}
-                  label={option.val}
-                />
+                  className={`insta-tab ${value === option.val ? 'active' : ''}`}
+                  onClick={() => handleInputChange(question.questionId, option.val)}
+                >
+                  {option.val}
+                </button>
               ))}
-            </RadioGroup>
+            </div>
             {fieldErrors[question.questionId] && (
               <FormHelperText error>{fieldErrors[question.questionId]}</FormHelperText>
             )}
@@ -451,66 +441,36 @@ const DynamicForm = ({ formId, onSuccess }) => {
 
       case 'checkbox':
         return (
-          <FormControl component="fieldset" margin="normal" required={isRequired} error={!!fieldErrors[question.questionId]}>
-            <FormLabel component="legend">{questionLabel}</FormLabel>
-            <FormGroup>
-              {question.options?.map((option, index) => (
-                <FormControlLabel
-                  key={index}
-                  control={
-                    <Checkbox
-                      checked={Array.isArray(value) && value.includes(option.val)}
-                      onChange={(e) => {
-                        const currentValue = Array.isArray(value) ? value : [];
-                        const newValue = e.target.checked
-                          ? [...currentValue, option.val]
-                          : currentValue.filter(item => item !== option.val);
-                        handleInputChange(question.questionId, newValue);
-                      }}
-                    />
-                  }
-                  label={option.val}
-                />
-              ))}
-            </FormGroup>
-            {fieldErrors[question.questionId] && (
-              <FormHelperText error>{fieldErrors[question.questionId]}</FormHelperText>
-            )}
-          </FormControl>
+          <CheckboxGroup
+            label={labelText}
+            afterLabel={afterLabel}
+            value={Array.isArray(value) ? value : []}
+            onChange={(v) => handleInputChange(question.questionId, v)}
+            options={question.options || []}
+            error={fieldErrors[question.questionId]}
+            name={question.questionId}
+          />
         );
 
       case 'date':
         return (
-          <TextField
-            fullWidth
-            type="date"
-            label={questionLabel}
-            name={question.questionId}
-            value={value ? new Date(value).toISOString().split('T')[0] : ''}
-            onChange={(e) => handleInputChange(question.questionId, e.target.value)}
-            required={isRequired}
-            variant="outlined"
-            margin="normal"
-            InputLabelProps={{ shrink: true }}
-            helperText={fieldErrors[question.questionId] || undefined}
-            error={!!fieldErrors[question.questionId]}
+          <DateField
+            value={value ? new Date(value) : null}
+            onChange={(v) => handleInputChange(question.questionId, v)}
           />
         );
 
       case 'file':
         return (
-          <TextField
+          <InputField
             fullWidth
             type="file"
-            label={questionLabel}
+            label={labelText}
+            afterLabel={afterLabel}
             name={question.questionId}
-            onChange={(e) => handleInputChange(question.questionId, e.target.files[0])}
+            onChange={(v, e) => handleInputChange(question.questionId, e?.target?.files?.[0] ?? v)}
             required={isRequired}
-            variant="outlined"
-            margin="normal"
-            InputLabelProps={{ shrink: true }}
-            helperText={fieldErrors[question.questionId] || undefined}
-            error={!!fieldErrors[question.questionId]}
+            error={fieldErrors[question.questionId]}
           />
         );
 

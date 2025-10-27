@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Box,
   Paper,
@@ -28,7 +28,7 @@ import {
   ExpandMore as ExpandMoreIcon,
   CheckCircle as ValidationIcon,
 } from '@mui/icons-material';
-import { formsAPI } from '../services/api';
+import { formsAPI, categoriesAPI } from '../services/api';
 
 const FormBuilder = ({ onFormCreated, editFormData = null, disableAddQuestion = false }) => {
   const [formId, setFormId] = useState(editFormData?._id || null);
@@ -38,6 +38,7 @@ const FormBuilder = ({ onFormCreated, editFormData = null, disableAddQuestion = 
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
+  const [categories, setCategories] = useState([]);
   const isEditMode = !!editFormData;
 
   const fieldTypes = [
@@ -56,6 +57,26 @@ const FormBuilder = ({ onFormCreated, editFormData = null, disableAddQuestion = 
     'required', 'max', 'min', 'maxLength', 'minLength', 
     'pattern', 'email', 'maxDate', 'minDate', 'maxPastDays', 'maxFutureDays'
   ];
+
+  useEffect(() => {
+    fetchCategories();
+  }, []);
+
+  const fetchCategories = async () => {
+    try {
+      const response = await categoriesAPI.getAll();
+      setCategories(response.data);
+    } catch (err) {
+      console.error('Error fetching categories:', err);
+      // Initialize default categories if fetch fails
+      setCategories([
+        { name: 'Health' },
+        { name: 'Travel' },
+        { name: 'Occupation' },
+        { name: 'Avocation' }
+      ]);
+    }
+  };
 
   const createEmptyQuestion = (order = 0) => ({
     question: '',
@@ -93,6 +114,8 @@ const FormBuilder = ({ onFormCreated, editFormData = null, disableAddQuestion = 
     children: '',
     triggerValue: '', // For sub-questions: which parent value triggers this sub-question
     subQuestions: [],
+    // listItems allows admin to provide ordered list content (rendered as <ol> in frontend)
+    listItems: [],
     parentQuestionId: '',
     order: order,
   });
@@ -107,6 +130,29 @@ const FormBuilder = ({ onFormCreated, editFormData = null, disableAddQuestion = 
     const newSubQuestion = createEmptyQuestion(question.subQuestions?.length || 0);
     const updatedSubQuestions = [...(question.subQuestions || []), newSubQuestion];
     updateQuestion(questionIndex, { subQuestions: updatedSubQuestions });
+  };
+
+  // Sub-question list item handlers
+  const addSubQuestionListItem = (questionIndex, subQuestionIndex) => {
+    const question = questions[questionIndex];
+    const subQuestion = question.subQuestions[subQuestionIndex];
+    const newList = [...(subQuestion.listItems || []), ''];
+    updateSubQuestion(questionIndex, subQuestionIndex, { listItems: newList });
+  };
+
+  const updateSubQuestionListItem = (questionIndex, subQuestionIndex, itemIndex, value) => {
+    const question = questions[questionIndex];
+    const subQuestion = question.subQuestions[subQuestionIndex];
+    const newList = [...(subQuestion.listItems || [])];
+    newList[itemIndex] = value;
+    updateSubQuestion(questionIndex, subQuestionIndex, { listItems: newList });
+  };
+
+  const removeSubQuestionListItem = (questionIndex, subQuestionIndex, itemIndex) => {
+    const question = questions[questionIndex];
+    const subQuestion = question.subQuestions[subQuestionIndex];
+    const newList = (subQuestion.listItems || []).filter((_, i) => i !== itemIndex);
+    updateSubQuestion(questionIndex, subQuestionIndex, { listItems: newList });
   };
 
   const updateSubQuestion = (questionIndex, subQuestionIndex, updates) => {
@@ -192,6 +238,26 @@ const FormBuilder = ({ onFormCreated, editFormData = null, disableAddQuestion = 
     const question = questions[questionIndex];
     const newOptions = [...(question.options || []), { key: '', val: '' }];
     updateQuestion(questionIndex, { options: newOptions });
+  };
+
+  // List item handlers (for questions that contain numbered list content)
+  const addListItem = (questionIndex) => {
+    const question = questions[questionIndex];
+    const newList = [...(question.listItems || []), ''];
+    updateQuestion(questionIndex, { listItems: newList });
+  };
+
+  const updateListItem = (questionIndex, itemIndex, value) => {
+    const question = questions[questionIndex];
+    const newList = [...(question.listItems || [])];
+    newList[itemIndex] = value;
+    updateQuestion(questionIndex, { listItems: newList });
+  };
+
+  const removeListItem = (questionIndex, itemIndex) => {
+    const question = questions[questionIndex];
+    const newList = (question.listItems || []).filter((_, i) => i !== itemIndex);
+    updateQuestion(questionIndex, { listItems: newList });
   };
 
   const updateOption = (questionIndex, optionIndex, field, value) => {
@@ -316,8 +382,10 @@ const FormBuilder = ({ onFormCreated, editFormData = null, disableAddQuestion = 
     if (!validateForm()) return;
 
     try {
-      setLoading(true);
-      setError('');
+  setLoading(true);
+  setError('');
+  // Debug: print questions array before constructing payload so we can verify listItems exist
+  console.log('Questions payload preview:', JSON.stringify(questions, null, 2));
       
       const formData = {
         title: formTitle,
@@ -760,6 +828,8 @@ const FormBuilder = ({ onFormCreated, editFormData = null, disableAddQuestion = 
                         variant="outlined"
                       />
 
+                      
+
                       {/* Row 1: Question Number */}
                       <TextField
                         fullWidth
@@ -779,10 +849,11 @@ const FormBuilder = ({ onFormCreated, editFormData = null, disableAddQuestion = 
                             onChange={(e) => updateQuestion(index, { questionType: e.target.value })}
                             label="Category/Question Type"
                           >
-                            <MenuItem value="Health">Health</MenuItem>
-                            <MenuItem value="Travel">Travel</MenuItem>
-                            <MenuItem value="Occupation">Occupation</MenuItem>
-                            <MenuItem value="Avocation">Avocation</MenuItem>
+                            {categories.map((cat) => (
+                              <MenuItem key={cat._id || cat.name} value={cat.name}>
+                                {cat.name}
+                              </MenuItem>
+                            ))}
                           </Select>
                         </FormControl>
 
@@ -822,6 +893,31 @@ const FormBuilder = ({ onFormCreated, editFormData = null, disableAddQuestion = 
                           placeholder="e.g., yes, true"
                           helperText="Answer that triggers sub-questions"
                         />
+                      </Box>
+
+                      {/* List Items (ordered list content) - admin can add any number of list items */}
+                      <Box sx={{ mt: 2 }}>
+                        <Typography variant="subtitle2" gutterBottom>
+                          Question Lables
+                        </Typography>
+                        {(question.listItems || []).map((item, itemIndex) => (
+                          <Box key={itemIndex} display="flex" alignItems="center" gap={1} mb={1}>
+                            <TextField
+                              size="small"
+                              label={`Item ${itemIndex + 1}`}
+                              value={item}
+                              onChange={(e) => updateListItem(index, itemIndex, e.target.value)}
+                              placeholder={`List item ${itemIndex + 1}`}
+                              sx={{ flex: 1 }}
+                            />
+                            <IconButton size="small" color="error" onClick={() => removeListItem(index, itemIndex)}>
+                              <DeleteIcon />
+                            </IconButton>
+                          </Box>
+                        ))}
+                        <Button size="small" startIcon={<AddIcon />} onClick={() => addListItem(index)}>
+                          Add Lable
+                        </Button>
                       </Box>
 
                       {renderQuestionOptions(question, index)}
@@ -877,6 +973,31 @@ const FormBuilder = ({ onFormCreated, editFormData = null, disableAddQuestion = 
                                         variant="outlined"
                                       />
                                       
+                                      {/* Sub-Question List Items (ordered list content) */}
+                                      <Box sx={{ mt: 1 }}>
+                                        <Typography variant="caption" gutterBottom>
+                                          Question Lables
+                                        </Typography>
+                                        {(subQuestion.listItems || []).map((item, itemIndex) => (
+                                          <Box key={itemIndex} display="flex" alignItems="center" gap={1} mb={1}>
+                                            <TextField
+                                              size="small"
+                                              label={`Item ${itemIndex + 1}`}
+                                              value={item}
+                                              onChange={(e) => updateSubQuestionListItem(index, subIndex, itemIndex, e.target.value)}
+                                              placeholder={`List item ${itemIndex + 1}`}
+                                              sx={{ flex: 1 }}
+                                            />
+                                            <IconButton size="small" color="error" onClick={() => removeSubQuestionListItem(index, subIndex, itemIndex)}>
+                                              <DeleteIcon />
+                                            </IconButton>
+                                          </Box>
+                                        ))}
+                                        <Button size="small" startIcon={<AddIcon />} onClick={() => addSubQuestionListItem(index, subIndex)}>
+                                          Add Lable
+                                        </Button>
+                                      </Box>
+                                      
                                       {/* Row 1: Sub-Question Number */}
                                       <TextField
                                         fullWidth
@@ -896,10 +1017,11 @@ const FormBuilder = ({ onFormCreated, editFormData = null, disableAddQuestion = 
                                             onChange={(e) => updateSubQuestion(index, subIndex, { questionType: e.target.value })}
                                             label="Category/Question Type"
                                           >
-                                            <MenuItem value="Health">Health</MenuItem>
-                                            <MenuItem value="Travel">Travel</MenuItem>
-                                            <MenuItem value="Occupation">Occupation</MenuItem>
-                                            <MenuItem value="Avocation">Avocation</MenuItem>
+                                            {categories.map((cat) => (
+                                              <MenuItem key={cat._id || cat.name} value={cat.name}>
+                                                {cat.name}
+                                              </MenuItem>
+                                            ))}
                                           </Select>
                                         </FormControl>
                                         

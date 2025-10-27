@@ -15,11 +15,13 @@ import {
   Logout as LogoutIcon,
   AccountCircle,
   ManageAccounts as ManageAccountsIcon,
-  Dashboard as DashboardIcon
+  Dashboard as DashboardIcon,
+  Category as CategoryIcon
 } from '@mui/icons-material';
 import { useNavigate, Routes, Route, useLocation } from 'react-router-dom';
 import HomePage from './HomePage';
 import UserManagement from './UserManagement';
+import CategoryManagement from './CategoryManagement';
 
 function AdminDashboard() {
   const navigate = useNavigate();
@@ -42,6 +44,7 @@ function AdminDashboard() {
   };
 
   const isUsersPage = location.pathname === '/admin/users';
+  const isCategoriesPage = location.pathname === '/admin/categories';
 
   return (
     <Box sx={{ display: 'flex', flexDirection: 'column', minHeight: '100vh' }}>
@@ -56,9 +59,17 @@ function AdminDashboard() {
             <Button
               color="inherit"
               onClick={() => navigate('/admin')}
-              variant={!isUsersPage ? 'outlined' : 'text'}
+              variant={!isUsersPage && !isCategoriesPage ? 'outlined' : 'text'}
             >
               Forms
+            </Button>
+            <Button
+              color="inherit"
+              startIcon={<CategoryIcon />}
+              onClick={() => navigate('/admin/categories')}
+              variant={isCategoriesPage ? 'outlined' : 'text'}
+            >
+              Categories
             </Button>
             <Button
               color="inherit"
@@ -105,6 +116,7 @@ function AdminDashboard() {
         <Routes>
           <Route path="/" element={<HomePage />} />
           <Route path="/form/:id" element={<HomePage />} />
+          <Route path="/categories" element={<CategoryManagement />} />
           <Route path="/users" element={<UserManagement />} />
         </Routes>
       </Box>

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Box,
   Paper,
@@ -23,8 +23,10 @@ import {
   ExpandMore as ExpandMoreIcon,
   CheckCircle as ValidationIcon,
 } from '@mui/icons-material';
+import { categoriesAPI } from '../services/api';
 
 const QuestionAdder = ({ category, onQuestionAdded, onCancel }) => {
+  const [categories, setCategories] = useState([]);
   const [question, setQuestion] = useState({
     question: '',
     questionType: category || '',
@@ -61,12 +63,34 @@ const QuestionAdder = ({ category, onQuestionAdded, onCancel }) => {
     subQuestions: [],
     parentQuestionId: '',
     order: 0,
+    // allow admin to add ordered list content associated with the question
+    listItems: [],
   });
 
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [showSubQuestionForm, setShowSubQuestionForm] = useState(false);
   const [currentSubQuestion, setCurrentSubQuestion] = useState(null);
+
+  useEffect(() => {
+    fetchCategories();
+  }, []);
+
+  const fetchCategories = async () => {
+    try {
+      const response = await categoriesAPI.getAll();
+      setCategories(response.data);
+    } catch (err) {
+      console.error('Error fetching categories:', err);
+      // Initialize default categories if fetch fails
+      setCategories([
+        { name: 'Health' },
+        { name: 'Travel' },
+        { name: 'Occupation' },
+        { name: 'Avocation' }
+      ]);
+    }
+  };
 
   const fieldTypes = [
     { value: 'text', label: 'Text Input' },
@@ -164,8 +188,44 @@ const QuestionAdder = ({ category, onQuestionAdded, onCancel }) => {
       triggerValue: '', // User will specify which parent answer triggers this
       parentQuestionId: question.questionId,
       order: question.subQuestions.length,
+      // list items for the child question
+      listItems: [],
     };
   };
+
+    // Main question list item handlers
+    const addListItem = () => {
+      const newList = [...(question.listItems || []), ''];
+      updateQuestion({ listItems: newList });
+    };
+
+    const updateListItem = (itemIndex, value) => {
+      const newList = [...(question.listItems || [])];
+      newList[itemIndex] = value;
+      updateQuestion({ listItems: newList });
+    };
+
+    const removeListItem = (itemIndex) => {
+      const newList = (question.listItems || []).filter((_, i) => i !== itemIndex);
+      updateQuestion({ listItems: newList });
+    };
+
+    // Current sub-question list item handlers (editing the transient currentSubQuestion)
+    const addSubQuestionListItem = () => {
+      const newList = [...(currentSubQuestion.listItems || []), ''];
+      updateSubQuestion({ listItems: newList });
+    };
+
+    const updateSubQuestionListItem = (itemIndex, value) => {
+      const newList = [...(currentSubQuestion.listItems || [])];
+      newList[itemIndex] = value;
+      updateSubQuestion({ listItems: newList });
+    };
+
+    const removeSubQuestionListItem = (itemIndex) => {
+      const newList = (currentSubQuestion.listItems || []).filter((_, i) => i !== itemIndex);
+      updateSubQuestion({ listItems: newList });
+    };
 
   const addSubQuestion = () => {
     if (!question.children) {
@@ -643,6 +703,31 @@ const QuestionAdder = ({ category, onQuestionAdded, onCancel }) => {
                 size="small"
               />
 
+              {/* List Items for the new child question */}
+              <Box sx={{ mt: 1 }}>
+                <Typography variant="caption" gutterBottom>
+                  Question Lables
+                </Typography>
+                {(currentSubQuestion.listItems || []).map((item, itemIndex) => (
+                  <Box key={itemIndex} display="flex" alignItems="center" gap={1} mb={1}>
+                    <TextField
+                      size="small"
+                      label={`Item ${itemIndex + 1}`}
+                      value={item}
+                      onChange={(e) => updateSubQuestionListItem(itemIndex, e.target.value)}
+                      placeholder={`List item ${itemIndex + 1}`}
+                      sx={{ flex: 1 }}
+                    />
+                    <IconButton size="small" color="error" onClick={() => removeSubQuestionListItem(itemIndex)}>
+                      <DeleteIcon />
+                    </IconButton>
+                  </Box>
+                ))}
+                <Button size="small" startIcon={<AddIcon />} onClick={addSubQuestionListItem}>
+                  Add Lable
+                </Button>
+              </Box>
+
               <TextField
                 fullWidth
                 label="Sub-Question Number"
@@ -742,6 +827,31 @@ const QuestionAdder = ({ category, onQuestionAdded, onCancel }) => {
             variant="outlined"
           />
 
+          {/* List Items (ordered list content) for main question */}
+          <Box sx={{ mt: 1 }}>
+            <Typography variant="caption" gutterBottom>
+              Question Lables
+            </Typography>
+            {(question.listItems || []).map((item, itemIndex) => (
+              <Box key={itemIndex} display="flex" alignItems="center" gap={1} mb={1}>
+                <TextField
+                  size="small"
+                  label={`Item ${itemIndex + 1}`}
+                  value={item}
+                  onChange={(e) => updateListItem(itemIndex, e.target.value)}
+                  placeholder={`List item ${itemIndex + 1}`}
+                  sx={{ flex: 1 }}
+                />
+                <IconButton size="small" color="error" onClick={() => removeListItem(itemIndex)}>
+                  <DeleteIcon />
+                </IconButton>
+              </Box>
+            ))}
+            <Button size="small" startIcon={<AddIcon />} onClick={addListItem}>
+              Add Lable
+            </Button>
+          </Box>
+
           {/* Row 1: Question Number */}
           <TextField
             fullWidth
@@ -761,10 +871,11 @@ const QuestionAdder = ({ category, onQuestionAdded, onCancel }) => {
                 onChange={(e) => updateQuestion({ questionType: e.target.value })}
                 label="Category/Question Type"
               >
-                <MenuItem value="Health">Health</MenuItem>
-                <MenuItem value="Travel">Travel</MenuItem>
-                <MenuItem value="Occupation">Occupation</MenuItem>
-                <MenuItem value="Avocation">Avocation</MenuItem>
+                {categories.map((cat) => (
+                  <MenuItem key={cat._id || cat.name} value={cat.name}>
+                    {cat.name}
+                  </MenuItem>
+                ))}
               </Select>
             </FormControl>
 

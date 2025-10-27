@@ -1,41 +1,34 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { useLocation, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate } from 'react-router-dom';
 import {
   Box,
   Paper,
   Typography,
-  TextField,
   Button,
   FormControl,
   FormLabel,
   FormHelperText,
-  RadioGroup,
-  FormControlLabel,
-  Radio,
-  Checkbox,
-  FormGroup,
-  Select,
-  MenuItem,
-  InputLabel,
   Alert,
   CircularProgress,
   Chip,
   Container,
-  LinearProgress,
+  
   
 } from '@mui/material';
+import '../ui/insta/_form.scss';
+import { InputField, DateField, SelectField, CheckboxGroup, TextAreaField } from '../ui/insta/_form';
 import axios from 'axios';
+import { useDispatch, useSelector } from 'react-redux';
+import { setQuestions as setQuestionsAction, setAnswer, setAllAnswers, setCategory } from '../store/actions';
 import CheckCircleIcon from '@mui/icons-material/CheckCircle';
-import ErrorOutlineIcon from '@mui/icons-material/ErrorOutline';
+import ArrowBackIosNewIcon from '@mui/icons-material/ArrowBackIosNew';
 
 // Inline field errors are shown per-question; no global snackbars/toasts
 
-const UserForm = () => {
-  const location = useLocation();
+const UserForm = ({ category: categoryProp, appNumber: appNumberProp, mobile: mobileProp }) => {
+  const params = useParams();
+  const category = categoryProp || params.category;
   const navigate = useNavigate();
-  
-  // Extract category from pathname (e.g., /Health -> Health)
-  const category = location.pathname.substring(1); // Remove leading slash
   
   const [questions, setQuestions] = useState([]);
   const [formData, setFormData] = useState({});
@@ -43,40 +36,59 @@ const UserForm = () => {
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState(false);
-  const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
   const [fieldErrors, setFieldErrors] = useState({});
+  const [showFooter, setShowFooter] = useState(true);
   const questionRefs = useRef({});
-
-  useEffect(() => {
-    fetchQuestions();
-  }, [category]);
-
-  const fetchQuestions = async () => {
+  const formRef = useRef(null);
+  const fetchQuestions = React.useCallback(async () => {
     try {
       setLoading(true);
       setError('');
-      
-      // Validate category
-      const validCategories = ['Health', 'Travel', 'Occupation', 'Avocation'];
-      if (!validCategories.includes(category)) {
-        setError(`Invalid category: ${category}. Please use Health, Travel, Occupation, or Avocation.`);
-        setLoading(false);
-        return;
-      }
-      
+      console.log('Fetching questions for category:', category);
+      // Fetch questions for the category - validation is done on the backend
       const response = await axios.get(`http://localhost:5000/api/user/questions/${category}`);
+      console.log('API Response:', response.data);
+      console.log('Questions received:', response.data.questions.length);
       setQuestions(response.data.questions);
-      
+  // also store questions in redux for global access
+  try { dispatch(setQuestionsAction(response.data.questions)); dispatch(setCategory(category)); } catch(e){}
       if (response.data.questions.length === 0) {
         setError(`No questions found for ${category} category. Please create some questions in the admin panel first.`);
       }
     } catch (err) {
       setError('Failed to load questions. Please try again.');
       console.error('Error fetching questions:', err);
+      console.error('Error details:', err.response?.data);
     } finally {
       setLoading(false);
     }
-  };
+  }, [category]);
+
+  const reduxAnswers = useSelector(state => state.answers || {});
+  const reduxUser = useSelector(state => state.user || null);
+  const dispatch = useDispatch();
+
+  useEffect(() => {
+    fetchQuestions();
+
+    const onResizeOrCheck = () => {
+      const doc = document.documentElement || document.body;
+      const formHeight = formRef.current ? formRef.current.scrollHeight : doc.scrollHeight;
+      setShowFooter(formHeight > window.innerHeight);
+    }
+    onResizeOrCheck();
+    window.addEventListener('resize', onResizeOrCheck);
+    return () => {
+      window.removeEventListener('resize', onResizeOrCheck);
+    }
+  }, [fetchQuestions]);
+
+  // Initialize form data from Redux answers when available
+  useEffect(() => {
+    if (reduxAnswers && Object.keys(reduxAnswers).length > 0) {
+      setFormData(reduxAnswers);
+    }
+  }, [reduxAnswers, category]);
 
   // No snackbar/toast; errors render under each field
 
@@ -93,6 +105,8 @@ const UserForm = () => {
         return next;
       });
     }
+    // persist to redux
+    try { dispatch(setAnswer(fieldName, value)); } catch (e) {}
   };
 
   const handleFieldBlur = (question) => {
@@ -275,39 +289,62 @@ const UserForm = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    
+
     if (!validateAllQuestions()) {
       return;
     }
 
+  // Save draft to Redux and navigate to review page
+    // Build a review-friendly answers object mapping question text -> answer
+    const answersForReview = {};
+    questions.forEach(q => {
+      const val = formData[q.questionId];
+      if (val !== undefined) {
+        answersForReview[q.question] = val;
+      }
+      // include sub-questions if visible
+      if (q.subQuestions && q.subQuestions.length > 0) {
+        q.subQuestions.forEach(sq => {
+          const sval = formData[sq.questionId];
+          if (sval !== undefined) answersForReview[sq.question] = sval;
+        });
+      }
+    });
+
+    const draft = {
+      category,
+      answers: answersForReview,
+      rawAnswers: formData,
+      appNumber: appNumberProp || null,
+      mobile: mobileProp || null,
+      savedAt: new Date().toISOString()
+    };
     try {
-      setSubmitting(true);
-      setError('');
-      
-      await axios.post('http://localhost:5000/api/user/submit', {
-        category,
-        answers: formData
-      });
-      
-      setSuccess(true);
-      setFormData({});
-      // Success UI is handled by success flag below
+      // store raw answers in redux and navigate to review
+      dispatch(setAllAnswers(draft.rawAnswers || draft.answers));
+      navigate('/review');
     } catch (err) {
-      const errorMessage = 'Failed to submit form. Please try again.';
-      setError(errorMessage);
-      setFieldErrors(prev => ({ ...prev, submit: errorMessage }));
-      console.error('Error submitting form:', err);
-    } finally {
-      setSubmitting(false);
+      console.error('Failed to prepare review', err);
+      setError('Failed to prepare review. Please try again.');
     }
   };
 
   const renderQuestion = (question, showNumber = true) => {
     const value = formData[question.questionId] || '';
     const isRequired = question.validator_values?.required || false;
-    const questionLabel = showNumber && question.questionNumber 
+    const baseLabel = showNumber && question.questionNumber 
       ? `${question.questionNumber}. ${question.question}` 
       : question.question;
+
+    // If admin provided listItems (array), render them as an ordered list after the main label
+    const afterLabel = (question.listItems && question.listItems.length > 0) ? (
+      <ol className="insta-numbered-list">
+        {question.listItems.map((it, i) => (
+          <li key={i} dangerouslySetInnerHTML={{ __html: it }} />
+        ))}
+      </ol>
+    ) : null;
+    const labelText = baseLabel;
 
     switch (question.option_type) {
       case 'text':
@@ -336,79 +373,67 @@ const UserForm = () => {
         }
         
         return (
-          <TextField
-            fullWidth
-            type={question.option_type}
-            label={questionLabel}
-            name={question.questionId}
-            value={value}
-            onChange={(e) => handleInputChange(question.questionId, e.target.value)}
-            onBlur={() => handleFieldBlur(question)}
-            required={isRequired}
-            variant="outlined"
-            margin="normal"
-            inputProps={inputProps}
-            helperText={fieldErrors[question.questionId] || helperText || undefined}
-            error={!!fieldErrors[question.questionId]}
-          />
+      <InputField
+        fullWidth
+        type={question.option_type}
+        label={labelText}
+        afterLabel={afterLabel}
+        name={question.questionId}
+        value={value}
+        onChange={(v) => handleInputChange(question.questionId, v)}
+        onBlur={() => handleFieldBlur(question)}
+        required={isRequired}
+        placeholder={question.placeholder || ''}
+        min={inputProps.min}
+        max={inputProps.max}
+        error={fieldErrors[question.questionId]}
+      />
         );
 
       case 'textarea':
         return (
-          <TextField
-            fullWidth
-            multiline
-            rows={4}
-            label={questionLabel}
-            name={question.questionId}
+          <TextAreaField
+            label={labelText}
+            afterLabel={afterLabel}
             value={value}
-            onChange={(e) => handleInputChange(question.questionId, e.target.value)}
-            onBlur={() => handleFieldBlur(question)}
-            required={isRequired}
-            variant="outlined"
-            margin="normal"
+            onChange={(v) => handleInputChange(question.questionId, v)}
+            rows={4}
+            error={fieldErrors[question.questionId]}
+            placeholder={question.placeholder || ''}
           />
         );
 
       case 'select':
         return (
-          <FormControl fullWidth margin="normal" required={isRequired} error={!!fieldErrors[question.questionId]}>
-            <InputLabel>{questionLabel}</InputLabel>
-            <Select
-              value={value}
-              onChange={(e) => handleInputChange(question.questionId, e.target.value)}
-              label={questionLabel}
-            >
-              {question.options?.map((option, index) => (
-                <MenuItem key={index} value={option.val}>
-                  {option.val}
-                </MenuItem>
-              ))}
-            </Select>
-            {fieldErrors[question.questionId] && (
-              <FormHelperText error>{fieldErrors[question.questionId]}</FormHelperText>
-            )}
-          </FormControl>
+          <SelectField
+            label={labelText}
+            afterLabel={afterLabel}
+            value={value}
+            onChange={(v) => handleInputChange(question.questionId, v)}
+            options={question.options || []}
+            error={fieldErrors[question.questionId]}
+            name={question.questionId}
+          />
         );
 
       case 'radio':
         return (
-          <FormControl component="fieldset" margin="normal" required={isRequired} error={!!fieldErrors[question.questionId]}>
-            <FormLabel component="legend">{questionLabel}</FormLabel>
-            <RadioGroup
-              value={value}
-              onChange={(e) => handleInputChange(question.questionId, e.target.value)}
-              onBlur={() => handleFieldBlur(question)}
-            >
+      <FormControl component="fieldset" margin="normal" required={isRequired} error={!!fieldErrors[question.questionId]}>
+        <FormLabel component="legend">{labelText}</FormLabel>
+        {afterLabel}
+        <div className="insta-tabs" role="tablist" aria-label={typeof labelText === 'string' ? labelText : question.questionId}>
               {question.options?.map((option, index) => (
-                <FormControlLabel
+                <button
+                  type="button"
                   key={index}
-                  value={option.val}
-                  control={<Radio />}
-                  label={option.val}
-                />
+                  className={`insta-tab ${value === option.val ? 'active' : ''}`}
+                  onClick={() => handleInputChange(question.questionId, option.val)}
+                  onBlur={() => handleFieldBlur(question)}
+                >
+                  {option.val}
+                </button>
               ))}
-            </RadioGroup>
+            </div>
             {fieldErrors[question.questionId] && (
               <FormHelperText error>{fieldErrors[question.questionId]}</FormHelperText>
             )}
@@ -417,50 +442,22 @@ const UserForm = () => {
 
       case 'checkbox':
         return (
-          <FormControl component="fieldset" margin="normal" required={isRequired} error={!!fieldErrors[question.questionId]}>
-            <FormLabel component="legend">{questionLabel}</FormLabel>
-            <FormGroup>
-              {question.options?.map((option, index) => (
-                <FormControlLabel
-                  key={index}
-                  control={
-                    <Checkbox
-                      checked={value?.includes(option.val) || false}
-                      onChange={(e) => {
-                        const currentValues = value || [];
-                        const newValues = e.target.checked
-                          ? [...currentValues, option.val]
-                          : currentValues.filter(v => v !== option.val);
-                        handleInputChange(question.questionId, newValues);
-                      }}
-                    />
-                  }
-                  label={option.val}
-                />
-              ))}
-            </FormGroup>
-            {fieldErrors[question.questionId] && (
-              <FormHelperText error>{fieldErrors[question.questionId]}</FormHelperText>
-            )}
-          </FormControl>
+          <CheckboxGroup
+            label={labelText}
+            afterLabel={afterLabel}
+            value={value || []}
+            onChange={(v) => handleInputChange(question.questionId, v)}
+            options={question.options || []}
+            error={fieldErrors[question.questionId]}
+            name={question.questionId}
+          />
         );
 
       case 'date':
         return (
-          <TextField
-            fullWidth
-            type="date"
-            label={questionLabel}
-            name={question.questionId}
+          <DateField
             value={value}
-            onChange={(e) => handleInputChange(question.questionId, e.target.value)}
-            onBlur={() => handleFieldBlur(question)}
-            required={isRequired}
-            variant="outlined"
-            margin="normal"
-            InputLabelProps={{ shrink: true }}
-            helperText={fieldErrors[question.questionId] || undefined}
-            error={!!fieldErrors[question.questionId]}
+            onChange={(v) => handleInputChange(question.questionId, v)}
           />
         );
 
@@ -515,41 +512,28 @@ const UserForm = () => {
   }
 
   return (
-    <Container maxWidth="md" sx={{ py: 4 }}>
-      <Paper elevation={3} sx={{ p: { xs: 3, md: 5 } }}>
-        {/* Header */}
-        <Box sx={{ mb: 4, textAlign: 'center' }}>
-          <Chip 
-            label={category} 
-            color="primary" 
-            sx={{ fontSize: '1rem', fontWeight: 600, px: 2, py: 3, mb: 2 }}
-          />
-          <Typography variant="h4" component="h1" gutterBottom sx={{ fontWeight: 600 }}>
-            {category} Information Form
-          </Typography>
-          <Typography variant="body1" color="text.secondary">
-            Please fill out all required fields marked with *
-          </Typography>
-        </Box>
+    <Container maxWidth="md" sx={{ py: 4 }} className="insta-page">
+      <Paper elevation={3} className="insta-card" sx={{ p: { xs: 3, md: 5 } }}>
+        {/* Header (Instainsure style) */}
+        <div className="insta-page-header">
+          <div className="insta-header-icon">
+            {/* simple icon placeholder */}
+            <svg width="36" height="36" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><rect x="4" y="4" width="16" height="16" rx="2" stroke="#005e9e" strokeWidth="1.2" fill="#fff"/><path d="M7 9h10" stroke="#005e9e" strokeWidth="1.2" strokeLinecap="round"/><path d="M7 13h6" stroke="#005e9e" strokeWidth="1.2" strokeLinecap="round"/></svg>
+          </div>
+          <div>
+            <div className="insta-header-title">My Declarations</div>
+            <div className="insta-header-sub">Read the questions below and select your answers</div>
+            {reduxUser && (
+              <div style={{ marginTop: 8 }}>
+                <div style={{ color: 'var(--insta-muted)', fontSize: 14 }}>Applicant: <strong>{reduxUser.Name || ''}</strong></div>
+                <div style={{ color: 'var(--insta-muted)', fontSize: 14 }}>Application Number: <strong>{reduxUser.Appnumber || reduxUser.applicationNumber || ''}</strong></div>
+              </div>
+            )}
+            <div className="insta-header-underline" />
+          </div>
+        </div>
 
-        {/* Progress */}
-        {questions.length > 0 && (
-          <Box sx={{ mb: 3 }}>
-            <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
-              <Typography variant="body2" color="text.secondary">
-                Progress
-              </Typography>
-              <Typography variant="body2" color="text.secondary">
-                {Object.keys(formData).length} / {getAllQuestionsToValidate().length} answered
-              </Typography>
-            </Box>
-            <LinearProgress 
-              variant="determinate" 
-              value={(Object.keys(formData).length / getAllQuestionsToValidate().length) * 100} 
-              sx={{ height: 8, borderRadius: 4 }}
-            />
-          </Box>
-        )}
+        {/* Progress removed as per design request */}
 
         {error && (
           <Alert severity="error" sx={{ mb: 3 }}>
@@ -562,7 +546,7 @@ const UserForm = () => {
             No questions available for {category} category. Please check back later.
           </Alert>
         ) : (
-          <form onSubmit={handleSubmit} noValidate>
+          <form ref={formRef} onSubmit={handleSubmit} noValidate>
             <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
               {sortQuestionsByNumber(questions).map((question, index) => (
                 <React.Fragment key={index}>
@@ -570,10 +554,11 @@ const UserForm = () => {
                     ref={el => questionRefs.current[question.questionId] = el}
                     sx={{ 
                       p: 3, 
-                      border: fieldErrors[question.questionId] ? '2px solid #d32f2f' : '1px solid #e0e0e0', 
+                      border: fieldErrors[question.questionId] ? '2px solid #d32f2f' : 'none', 
+                      borderBottom: fieldErrors[question.questionId] ? undefined : '1px solid var(--insta-border)',
                       borderRadius: 2,
-                      backgroundColor: fieldErrors[question.questionId] ? '#ffebee' : '#fafafa',
-                      boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
+                      backgroundColor: fieldErrors[question.questionId] ? '#ffebee' : 'var(--insta-card-bg)',
+                      boxShadow: fieldErrors[question.questionId] ? '0 1px 3px rgba(0,0,0,0.1)' : 'none',
                       transition: 'all 0.3s ease'
                     }}>
                     <Box sx={{ 
@@ -589,15 +574,13 @@ const UserForm = () => {
                     <Box sx={{ 
                       ml: { xs: 2, sm: 4 }, 
                       p: 3, 
-                      border: '2px solid #1976d2', 
+                      border: `1px solid ${'var(--insta-border)'}`,
                       borderRadius: 2,
-                      backgroundColor: '#e3f2fd',
-                      boxShadow: '0 2px 4px rgba(25,118,210,0.2)'
+                      backgroundColor: 'var(--insta-card-bg)',
+                      boxShadow: '0 1px 3px rgba(0,0,0,0.04)'
                     }}>
-                      <Typography variant="h6" color="primary" gutterBottom fontWeight="600" sx={{ mb: 3 }}>
-                        📋 Additional Questions
-                      </Typography>
-                      <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+                      {/* Sub-questions header removed to match Instainsure styling */}
+                      <Box className="insta-child" sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
                         {question.subQuestions
                           .filter(subQ => {
                             // If triggerValue is set, only show if parent value matches
@@ -638,31 +621,41 @@ const UserForm = () => {
             </Box>
 
             <Box display="flex" justifyContent="center" marginTop={4}>
-              <Button
+              <button
                 type="submit"
-                variant="contained"
-                size="large"
+                className="insta-button"
                 disabled={submitting}
-                sx={{ 
-                  minWidth: 200,
-                  height: 48,
-                  fontSize: '1rem',
-                  fontWeight: 600,
-                  borderRadius: 2,
-                  boxShadow: 2,
-                  '&:hover': {
-                    boxShadow: 4
-                  }
-                }}
+                style={{ minWidth: 200, height: 48 }}
               >
-                {submitting ? <CircularProgress size={24} /> : 'Submit Form'}
-              </Button>
+                {submitting ? <CircularProgress size={24} sx={{ color: '#fff' }} /> : 'Submit Form'}
+              </button>
             </Box>
           </form>
         )}
       </Paper>
 
       {/* Toast removed: errors are shown inline below each question */}
+
+      {/* {showFooter && (
+      <div className="insta-footer">
+        <div className="insta-back" onClick={() => navigate(-1)}>
+          <ArrowBackIosNewIcon sx={{ fontSize: 18 }} />
+          <span>BACK</span>
+        </div>
+        <div>
+          <button
+            className="insta-proceed"
+            onClick={() => {
+              if (formRef.current && formRef.current.requestSubmit) formRef.current.requestSubmit();
+              else handleSubmit({ preventDefault: () => {} });
+            }}
+            disabled={submitting}
+          >
+            PROCEED
+          </button>
+        </div>
+      </div>
+      )} */}
     </Container>
   );
 };
