@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useSelector, useDispatch } from 'react-redux';
 import { clearAnswers } from '../store/actions';
 import '../ui/insta/_form.scss';
+import { userAPI } from '../services/api';
 import BasicDetailsIcon from '../assets/icons/BasicDetailsIcon.svg';
 
 const ReviewPage = () => {
@@ -80,18 +81,14 @@ const ReviewPage = () => {
         };
       });
 
-      const resp = await fetch('http://localhost:5000/api/user/submit', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ 
-          appNumber, 
-          mobile, 
-          category, 
-          answers: answersArray 
-        }),
+      const resp = await userAPI.submit({
+        appNumber,
+        mobile,
+        category,
+        answers: answersArray,
       });
-      const data = await resp.json();
-      if (resp.ok) {
+      const data = resp.data;
+      if (resp.status >= 200 && resp.status < 300) {
         dispatch(clearAnswers());
         navigate('/submitted');
       } else {

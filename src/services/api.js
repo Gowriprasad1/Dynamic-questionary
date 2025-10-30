@@ -45,6 +45,7 @@ export const userAPI = {
   sendOtp: (payload) => api.post('/user/send-otp', payload),
   verifyOtp: (payload) => api.post('/user/verify-otp', payload),
   getQuestions: (category) => api.get(`/user/questions/${encodeURIComponent(category)}`),
+  submit: (payload) => api.post('/user/submit', payload),
 };
 
 export default api;
