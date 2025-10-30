@@ -580,6 +580,132 @@ const FormBuilder = ({ onFormCreated, editFormData = null, disableAddQuestion = 
                               <button type="button" className="insta-button" style={{ background: '#fff', color: 'var(--insta-red)', border: '1px solid var(--insta-red)' }} onClick={() => removeSubQuestion(index, subIndex)}>Delete</button>
                             </div>
 
+                            {/* Editable fields for child question */}
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                              <textarea
+                                className="ui-input"
+                                rows={2}
+                                placeholder="Child Question Text"
+                                value={subQ.question || ''}
+                                onChange={(e) => updateSubQuestion(index, subIndex, { question: e.target.value })}
+                              />
+
+                              <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                                <input
+                                  className="ui-input"
+                                  placeholder="Child Question Number"
+                                  value={subQ.questionNumber || ''}
+                                  onChange={(e) => updateSubQuestion(index, subIndex, { questionNumber: e.target.value })}
+                                  style={{ flex: '1 1 180px' }}
+                                />
+
+                                <input
+                                  className="ui-input"
+                                  placeholder="Child Question ID"
+                                  value={subQ.questionId || ''}
+                                  onChange={(e) => updateSubQuestion(index, subIndex, { questionId: e.target.value })}
+                                  style={{ flex: '1 1 220px' }}
+                                />
+
+                                <div style={{ flex: '1 1 220px' }}>
+                                  <label className="ui-input-label" style={{ display: 'block', marginBottom: 4 }}>Option Type</label>
+                                  <select
+                                    className="ui-input"
+                                    value={subQ.option_type || 'text'}
+                                    onChange={(e) => updateSubQuestion(index, subIndex, { option_type: e.target.value })}
+                                  >
+                                    {fieldTypes.map((t) => (
+                                      <option key={t.value} value={t.value}>{t.label}</option>
+                                    ))}
+                                  </select>
+                                </div>
+
+                                <input
+                                  className="ui-input"
+                                  placeholder="Trigger Value (optional)"
+                                  value={subQ.triggerValue || ''}
+                                  onChange={(e) => updateSubQuestion(index, subIndex, { triggerValue: e.target.value })}
+                                  style={{ flex: '1 1 220px' }}
+                                />
+                              </div>
+                            </div>
+
+                            {/* Child Validation Rules */}
+                            <div style={{ marginTop: 10 }}>
+                              <div style={{ fontWeight: 700, marginBottom: 6 }}>Child Validation Rules</div>
+                              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginBottom: 8 }}>
+                                {validatorTypes.map((vt) => {
+                                  const selected = (subQ.validator_options || []).includes(vt);
+                                  return (
+                                    <button
+                                      key={vt}
+                                      type="button"
+                                      className="insta-button"
+                                      style={{ background: selected ? 'var(--insta-primary)' : '#fff', color: selected ? '#fff' : 'var(--insta-primary)', border: '1px solid var(--insta-primary)' }}
+                                      onClick={() => {
+                                        const cur = new Set(subQ.validator_options || []);
+                                        if (cur.has(vt)) cur.delete(vt); else cur.add(vt);
+                                        updateSubQuestion(index, subIndex, { validator_options: Array.from(cur) });
+                                      }}
+                                    >{vt}</button>
+                                  );
+                                })}
+                              </div>
+
+                              {validatorTypes.map((vt) => {
+                                const selected = (subQ.validator_options || []).includes(vt);
+                                const numTypes = ['max','min','maxLength','minLength'];
+                                const valObj = subQ.validator_values || {};
+                                const msgObj = subQ.error_messages || {};
+                                if (!selected) return null;
+                                return (
+                                  <div key={vt} style={{ marginBottom: 8 }}>
+                                    <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                                      {vt === 'required' ? (
+                                        <select
+                                          className="ui-input"
+                                          style={{ flex: '1 1 200px' }}
+                                          value={(valObj?.[vt] === true || valObj?.[vt] === 'true') ? 'true' : 'false'}
+                                          onChange={(e) => {
+                                            const nextVals = { ...(subQ.validator_values || {}) };
+                                            nextVals[vt] = e.target.value === 'true';
+                                            updateSubQuestion(index, subIndex, { validator_values: nextVals });
+                                          }}
+                                        >
+                                          <option value="true">true</option>
+                                          <option value="false">false</option>
+                                        </select>
+                                      ) : (
+                                        <input
+                                          className="ui-input"
+                                          style={{ flex: '1 1 200px' }}
+                                          placeholder={`${vt} value`}
+                                          value={valObj?.[vt] ?? ''}
+                                          onChange={(e) => {
+                                            const nextVals = { ...(subQ.validator_values || {}) };
+                                            nextVals[vt] = numTypes.includes(vt) ? e.target.value : e.target.value;
+                                            updateSubQuestion(index, subIndex, { validator_values: nextVals });
+                                          }}
+                                          type={numTypes.includes(vt) ? 'number' : 'text'}
+                                        />
+                                      )}
+                                      <input
+                                        className="ui-input"
+                                        style={{ flex: '1 1 320px' }}
+                                        placeholder={`${vt} error message`}
+                                        value={msgObj?.[vt] ?? ''}
+                                        onChange={(e) => {
+                                          const nextMsgs = { ...(subQ.error_messages || {}) };
+                                          nextMsgs[vt] = e.target.value;
+                                          updateSubQuestion(index, subIndex, { error_messages: nextMsgs });
+                                        }}
+                                      />
+                                    </div>
+                                  </div>
+                                );
+                              })}
+                            </div>
+
                             {/* Sub-question List Items */}
                             <div style={{ marginTop: 6 }}>
                               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>

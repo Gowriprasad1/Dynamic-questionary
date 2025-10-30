@@ -64,23 +64,69 @@ const UserForm = ({ category: categoryProp, appNumber: appNumberProp, mobile: mo
     }
   }, [reduxAnswers, category]);
 
+  // Try to restore saved progress
+  useEffect(() => {
+    const tryRestore = async () => {
+      try {
+        const params = { category };
+        if (appNumberProp) params.appNumber = appNumberProp;
+        if (mobileProp) params.mobile = mobileProp;
+        const resp = await userAPI.progress(params);
+        if (resp?.data?.success && resp.data.progress?.answers) {
+          const saved = resp.data.progress.answers;
+          let restored = {};
+          if (Array.isArray(saved)) {
+            saved.forEach(it => { if (it && it.questionId !== undefined) restored[it.questionId] = it.answer; });
+          } else if (typeof saved === 'object' && saved !== null) {
+            restored = saved;
+          }
+          setFormData(restored);
+          try { dispatch(setAllAnswers(restored)); } catch(e){}
+        }
+      } catch(e) { /* ignore missing progress */ }
+    };
+    tryRestore();
+  }, [category, appNumberProp, mobileProp, dispatch]);
+
   // No snackbar/toast; errors render under each field
 
   const handleInputChange = (fieldName, value) => {
-    setFormData(prev => ({
-      ...prev,
-      [fieldName]: value
-    }));
+    let nextStateRef = null;
+    setFormData(prev => {
+      let next = { ...prev, [fieldName]: value };
+
+      // Clear child answers no longer matching (value-only)
+      const norm = (s) => (s === undefined || s === null) ? '' : String(s).trim().toLowerCase();
+      const v = norm(value);
+      const parent = (questions || []).find(q => q.questionId === fieldName);
+      if (parent && Array.isArray(parent.subQuestions) && parent.subQuestions.length > 0) {
+        parent.subQuestions.forEach((sq) => {
+          if (!sq) return;
+          if (sq.triggerValue) {
+            const tv = norm(sq.triggerValue);
+            if (tv !== v && Object.prototype.hasOwnProperty.call(next, sq.questionId)) {
+              const { [sq.questionId]: _, ...rest } = next;
+              next = rest;
+              setFieldErrors(prevErr => {
+                if (!prevErr || !prevErr[sq.questionId]) return prevErr;
+                const ne = { ...prevErr };
+                delete ne[sq.questionId];
+                return ne;
+              });
+            }
+          }
+        });
+      }
+
+      nextStateRef = next;
+      return next;
+    });
     setError('');
     if (fieldErrors[fieldName]) {
-      setFieldErrors(prev => {
-        const next = { ...prev };
-        delete next[fieldName];
-        return next;
-      });
+      setFieldErrors(prev => { const next = { ...prev }; delete next[fieldName]; return next; });
     }
-    // persist to redux
-    try { dispatch(setAnswer(fieldName, value)); } catch (e) {}
+    // persist full answers to redux so cleared child values are removed there too
+    try { if (nextStateRef) { dispatch(setAllAnswers(nextStateRef)); } } catch (e) {}
   };
 
   const handleFieldBlur = (question) => {
@@ -163,26 +209,25 @@ const UserForm = ({ category: categoryProp, appNumber: appNumberProp, mobile: mo
   };
 
   const shouldShowSubQuestions = (question) => {
-    // First check if there are any sub-questions defined
-    if (!question.subQuestions || question.subQuestions.length === 0) {
-      return false;
-    }
-    
-    // Then check if children trigger value is set
-    if (!question.children) {
-      return false;
-    }
-    
+    if (!question.subQuestions || question.subQuestions.length === 0) return false;
     const parentValue = formData[question.questionId];
-    
-    // If no parent value selected, don't show sub-questions
-    if (!parentValue) {
-      return false;
+    if (parentValue === undefined || parentValue === null || parentValue === '') return false;
+    const norm = (s) => (s === undefined || s === null) ? '' : String(s).trim().toLowerCase();
+    const pv = norm(parentValue);
+    const selected = (question.options || []).find(o => String(o?.val) === String(parentValue));
+    const pk = norm(selected?.key);
+    const anyChildMatches = (question.subQuestions || []).some((sq) => {
+      if (!sq || !sq.triggerValue) return false;
+      const tv = norm(sq.triggerValue);
+      return tv === pv;
+    });
+    if (anyChildMatches) return true;
+    const anyChildHasTrigger = (question.subQuestions || []).some((sq) => sq && sq.triggerValue);
+    if (!anyChildHasTrigger && question.children) {
+      const triggers = question.children.split(',').map(v => norm(v));
+      if (triggers.includes(pv) || triggers.includes(pk)) return true;
     }
-    
-    // Support multiple trigger values separated by comma
-    const triggerValues = question.children.split(',').map(val => val.trim().toLowerCase());
-    return triggerValues.includes(parentValue.toString().toLowerCase());
+    return false;
   };
 
   const sortQuestionsByNumber = (questions) => {
@@ -294,8 +339,23 @@ const UserForm = ({ category: categoryProp, appNumber: appNumberProp, mobile: mo
       savedAt: new Date().toISOString()
     };
     try {
-      // store raw answers in redux and navigate to review
+      // store raw answers in redux
       dispatch(setAllAnswers(draft.rawAnswers || draft.answers));
+      // Build answers array for save-progress
+      const qMap = {};
+      (questions || []).forEach(q => {
+        if (q && q.questionId) qMap[q.questionId] = q.question;
+        if (q && Array.isArray(q.subQuestions)) {
+          q.subQuestions.forEach(sq => { if (sq && sq.questionId) qMap[sq.questionId] = sq.question; });
+        }
+      });
+      const answersArray = Object.entries(draft.rawAnswers || draft.answers || {}).map(([questionId, answer]) => ({
+        question: qMap[questionId] || questionId,
+        answer,
+        questionId,
+      }));
+      // save progress before navigating to review
+      try { await userAPI.saveProgress({ category, appNumber: appNumberProp || null, mobile: mobileProp || null, answers: answersArray }); } catch(e) { /* non-blocking */ }
       navigate('/review');
     } catch (err) {
       console.error('Failed to prepare review', err);
@@ -401,7 +461,7 @@ const UserForm = ({ category: categoryProp, appNumber: appNumberProp, mobile: mo
                   onClick={() => handleInputChange(question.questionId, option.val)}
                   onBlur={() => handleFieldBlur(question)}
                 >
-                  {option.val}
+                  {option.key}
                 </button>
               ))}
             </div>

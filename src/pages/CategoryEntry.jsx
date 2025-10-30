@@ -68,6 +68,7 @@ const CategoryEntry = () => {
       if (checkResp?.data?.isDuplicate) {
         setDuplicateMessage(checkResp.data.message || 'Questionnaire already submitted with this application number and category');
         setDuplicateDialogOpen(true);
+        setSubmittingApp(false);
         return;
       }
     } catch (err) {
@@ -210,6 +211,7 @@ const CategoryEntry = () => {
 
   const handleCloseDialog = () => {
     setDuplicateDialogOpen(false);
+    setSubmittingApp(false);
   };
 
   const stepTitle = step === 'otp' ? 'OTP' : `${category} - Application`;

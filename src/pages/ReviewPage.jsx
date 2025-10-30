@@ -10,6 +10,7 @@ const ReviewPage = () => {
   const navigate = useNavigate();
   const dispatch = useDispatch();
   const [submitting, setSubmitting] = useState(false);
+  const [tncAccepted, setTncAccepted] = useState(false);
   const reduxAnswers = useSelector(state => state.answers || {});
   const reduxUser = useSelector(state => state.user || {});
   const reduxQuestions = useSelector(state => state.questions || []);
@@ -159,8 +160,16 @@ const ReviewPage = () => {
               })}
             </div>
 
+            {/* Terms & Conditions */}
+            <div style={{ marginTop: 12, display: 'flex', alignItems: 'flex-start', gap: 8 }}>
+              <input id="tnc" type="checkbox" checked={tncAccepted} onChange={(e) => setTncAccepted(e.target.checked)} style={{ marginTop: 3 }} />
+              <label htmlFor="tnc" style={{ color: 'var(--insta-text)' }}>
+                I have read and accept the Terms & Conditions.
+              </label>
+            </div>
+
             <div className="desktop-cta" style={{ justifyContent: 'center', marginTop: 16 }}>
-              <button className="insta-button" onClick={handleSubmitFinal} disabled={submitting}>
+              <button className="insta-button" onClick={handleSubmitFinal} disabled={submitting || !tncAccepted}>
                 {submitting ? 'SUBMITTING...' : 'Submit'}
               </button>
             </div>
@@ -169,7 +178,7 @@ const ReviewPage = () => {
       </div>
       {/* Mobile-only footer CTA */}
       <div className="insta-footer">
-        <button className="insta-proceed mobile-cta proceed-btn" onClick={handleSubmitFinal} disabled={submitting}>
+        <button className="insta-proceed mobile-cta proceed-btn" onClick={handleSubmitFinal} disabled={submitting || !tncAccepted}>
           {submitting ? 'SUBMITTING...' : 'PROCEED'}
         </button>
       </div>

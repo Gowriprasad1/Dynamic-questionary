@@ -39,10 +39,34 @@ const DynamicForm = ({ formId, onSuccess }) => {
   }, [formId, fetchForm]);
 
   const handleInputChange = (fieldName, value) => {
-    setFormData(prev => ({
-      ...prev,
-      [fieldName]: value
-    }));
+    setFormData(prev => {
+      let next = { ...prev, [fieldName]: value };
+
+      // Clear child answers that no longer match this parent's trigger (value-only)
+      const norm = (s) => (s === undefined || s === null) ? '' : String(s).trim().toLowerCase();
+      const v = norm(value);
+      const parent = form?.questions?.find(q => q.questionId === fieldName);
+      if (parent && Array.isArray(parent.subQuestions) && parent.subQuestions.length > 0) {
+        parent.subQuestions.forEach((sq) => {
+          if (!sq) return;
+          if (sq.triggerValue) {
+            const tv = norm(sq.triggerValue);
+            if (tv !== v && Object.prototype.hasOwnProperty.call(next, sq.questionId)) {
+              const { [sq.questionId]: _, ...rest } = next;
+              next = rest;
+              setFieldErrors(prevErr => {
+                if (!prevErr || !prevErr[sq.questionId]) return prevErr;
+                const ne = { ...prevErr };
+                delete ne[sq.questionId];
+                return ne;
+              });
+            }
+          }
+        });
+      }
+
+      return next;
+    });
 
     // Clear error for this field when user starts typing
     if (fieldErrors[fieldName]) {
@@ -249,35 +273,35 @@ const DynamicForm = ({ formId, onSuccess }) => {
   };
 
   const shouldShowSubQuestions = (question) => {
-    // First check if there are any sub-questions defined
-    if (!question.subQuestions || question.subQuestions.length === 0) {
-      return false;
-    }
-    
-    // Then check if children trigger value is set
-    if (!question.children) {
-      return false;
-    }
-    
+    // must have sub-questions
+    if (!question.subQuestions || question.subQuestions.length === 0) return false;
+
     const parentValue = formData[question.questionId];
-    
-    // If no parent value selected, don't show sub-questions
-    if (!parentValue) {
-      return false;
-    }
-    
-    // Support multiple trigger values separated by comma
-    const triggerValues = question.children.split(',').map(val => val.trim().toLowerCase());
-    const shouldShow = triggerValues.includes(parentValue.toString().toLowerCase());
-    
-    console.log(`Checking sub-questions for ${question.questionId}:`, {
-      parentValue,
-      triggerValues,
-      hasSubQuestions: question.subQuestions.length,
-      shouldShow
+    if (parentValue === undefined || parentValue === null || parentValue === '') return false;
+
+    const norm = (s) => (s === undefined || s === null) ? '' : String(s).trim().toLowerCase();
+    const pv = norm(parentValue);
+    // also derive selected option key for legacy children matching
+    const selected = (question.options || []).find(o => String(o?.val) === String(parentValue));
+    const pk = norm(selected?.key);
+
+    // If any sub-question matches its own triggerValue (value-only), show block
+    const anyChildMatches = question.subQuestions.some((sq) => {
+      if (!sq || !sq.triggerValue) return false;
+      const tv = norm(sq.triggerValue);
+      return tv === pv;
     });
-    
-    return shouldShow;
+
+    if (anyChildMatches) return true;
+
+    // Backward-compat: ONLY if no sub-question has a triggerValue configured, use question.children
+    const anyChildHasTrigger = question.subQuestions.some((sq) => sq && sq.triggerValue);
+    if (!anyChildHasTrigger && question.children) {
+      const triggers = question.children.split(',').map(v => norm(v));
+      if (triggers.includes(pv) || triggers.includes(pk)) return true;
+    }
+
+    return false;
   };
 
   const sortQuestionsByNumber = (questions) => {
@@ -398,7 +422,7 @@ const DynamicForm = ({ formId, onSuccess }) => {
                   className={`insta-tab ${value === option.val ? 'active' : ''}`}
                   onClick={() => handleInputChange(question.questionId, option.val)}
                 >
-                  {option.val}
+                  {option.key}
                 </button>
               ))}
             </div>
