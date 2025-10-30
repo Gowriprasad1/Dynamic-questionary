@@ -37,7 +37,20 @@ const FormBuilder = ({ onFormCreated, editFormData = null, disableAddQuestion = 
   const fetchCategories = async () => {
     try {
       const response = await categoriesAPI.getAll();
-      setCategories(response.data);
+      const raw = response.data || [];
+      // Normalize so every category has a 'name'
+      const cats = raw.map(c => ({
+        ...c,
+        name: c?.name || c?.category || c?.title || c?.label || ''
+      })).filter(c => c.name && c.name.trim() !== '');
+      setCategories(cats);
+      // If any question has empty questionType, set it to first category name
+      if (cats.length > 0) {
+        setQuestions(prev => prev.map(q => ({
+          ...q,
+          questionType: q.questionType && q.questionType.trim() !== '' ? q.questionType : cats[0].name
+        })));
+      }
     } catch (err) {
       console.error('Error fetching categories:', err);
       // Initialize default categories if fetch fails
@@ -94,6 +107,9 @@ const FormBuilder = ({ onFormCreated, editFormData = null, disableAddQuestion = 
 
   const addQuestion = () => {
     const newQuestion = createEmptyQuestion(questions.length);
+    // default the questionType to the first available category if present
+    const firstCat = (categories && categories.length > 0) ? categories[0].name : '';
+    newQuestion.questionType = firstCat;
     setQuestions([...questions, newQuestion]);
   };
 
@@ -317,7 +333,7 @@ const FormBuilder = ({ onFormCreated, editFormData = null, disableAddQuestion = 
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    
+    console.log("trigger")
     if (!validateForm()) return;
 
     try {
@@ -327,16 +343,23 @@ const FormBuilder = ({ onFormCreated, editFormData = null, disableAddQuestion = 
       const formData = {
         title: formTitle,
         description: formDescription,
-        questions: questions.map((question, index) => ({
-          ...question,
-          validators: generateValidatorsObject(question),
-          subQuestions: question.subQuestions?.map((subQ, subIndex) => ({
-            ...subQ,
-            validators: generateValidatorsObject(subQ),
-            order: subIndex,
-          })) || [],
-          order: index,
-        })),
+        questions: questions.map((question, index) => {
+          const fallbackType = (categories && categories.length > 0 && categories[0]?.name) ? categories[0].name : 'General';
+          const qType = (question.questionType && String(question.questionType).trim() !== '') ? question.questionType : fallbackType;
+          const qOut = {
+            ...question,
+            questionType: qType,
+            validators: generateValidatorsObject(question),
+            subQuestions: question.subQuestions?.map((subQ, subIndex) => ({
+              ...subQ,
+              validators: generateValidatorsObject(subQ),
+              order: subIndex,
+            })) || [],
+            order: index,
+          };
+          console.log('[FormBuilder] Q', index + 1, 'questionType=', qOut.questionType);
+          return qOut;
+        }),
       };
 
       
@@ -489,7 +512,7 @@ const FormBuilder = ({ onFormCreated, editFormData = null, disableAddQuestion = 
                 <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
                   <div style={{ flex: '1 1 260px' }}>
                     <label className="ui-input-label" style={{ display: 'block', marginBottom: 4 }}>Category/Question Type</label>
-                    <select className="ui-input" value={question.questionType} onChange={(e) => updateQuestion(index, { questionType: e.target.value })} required>
+                    <select className="ui-input" value={question.questionType || (categories[0]?.name || '')} onChange={(e) => updateQuestion(index, { questionType: e.target.value })} required>
                       {categories.map((cat) => (
                         <option key={cat._id || cat.name} value={cat.name}>{cat.name}</option>
                       ))}
