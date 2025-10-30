@@ -1,29 +1,5 @@
 import React, { useState } from 'react';
-import {
-  Box,
-  Paper,
-  Typography,
-  Button,
-  IconButton,
-  Card,
-  Alert,
-  CircularProgress,
-  Chip,
-  Divider,
-  Dialog,
-  DialogTitle,
-  DialogContent,
-  DialogActions,
-  List,
-  ListItem,
-} from '@mui/material';
-import {
-  Add as AddIcon,
-  Edit as EditIcon,
-  Delete as DeleteIcon,
-  Save as SaveIcon,
-  ArrowBack as BackIcon,
-} from '@mui/icons-material';
+import '../ui/insta/_form.scss';
 import { formsAPI } from '../services/api';
 import FormBuilder from './FormBuilder';
 
@@ -38,10 +14,7 @@ const FormEditor = ({ formData, onFormUpdated, onCancel }) => {
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
 
-  const handleAddQuestion = () => {
-    setShowAddQuestion(true);
-    setEditingQuestionIndex(null);
-  };
+  // removed unused handleAddQuestion
 
   const handleEditQuestion = (parentIndex, subIndex = null) => {
     if (subIndex !== null) {
@@ -200,14 +173,10 @@ const FormEditor = ({ formData, onFormUpdated, onCancel }) => {
   const renderQuestionsList = () => {
     if (questions.length === 0) {
       return (
-        <Box textAlign="center" padding={4}>
-          <Typography variant="h6" color="text.secondary" gutterBottom>
-            No questions in this form
-          </Typography>
-          <Typography variant="body2" color="text.secondary" paragraph>
-            Use the FormBuilder to add questions
-          </Typography>
-        </Box>
+        <div style={{ textAlign: 'center', padding: 16 }}>
+          <div style={{ fontWeight: 700, marginBottom: 6, color: 'var(--insta-muted)' }}>No questions in this form</div>
+          <div style={{ color: 'var(--insta-muted)' }}>Use the FormBuilder to add questions</div>
+        </div>
       );
     }
 
@@ -216,8 +185,6 @@ const FormEditor = ({ formData, onFormUpdated, onCancel }) => {
     sortQuestionsByNumber(questions).forEach((question) => {
       const originalIndex = questions.findIndex(q => q.questionId === question.questionId);
       flattenedQuestions.push({ ...question, originalIndex, isSubQuestion: false });
-      
-      // Add sorted sub-questions right after parent
       if (question.subQuestions && question.subQuestions.length > 0) {
         const sortedSubQuestions = sortQuestionsByNumber(question.subQuestions);
         sortedSubQuestions.forEach((subQ) => {
@@ -234,100 +201,83 @@ const FormEditor = ({ formData, onFormUpdated, onCancel }) => {
     });
 
     return (
-      <List>
+      <div>
         {flattenedQuestions.map((item, displayIndex) => {
-          const question = item.isSubQuestion ? item : item;
+          const question = item; // unified reference
           const hasSubQuestions = !item.isSubQuestion && question.subQuestions && question.subQuestions.length > 0;
-          
+
           return (
-            <Card 
-              key={`${question.questionId || displayIndex}-${item.isSubQuestion ? 'sub' : 'main'}`} 
-              sx={{ 
-                mb: 2, 
-                p: 2,
-                ml: item.isSubQuestion ? 4 : 0,
-                bgcolor: item.isSubQuestion ? 'grey.50' : 'white',
-                borderLeft: item.isSubQuestion ? '4px solid #1976d2' : 'none'
+            <div
+              key={`${question.questionId || displayIndex}-${item.isSubQuestion ? 'sub' : 'main'}`}
+              className="insta-card"
+              style={{
+                marginBottom: 12,
+                padding: 12,
+                marginLeft: item.isSubQuestion ? 16 : 0,
+                background: item.isSubQuestion ? '#f7f9ff' : '#fff',
+                borderLeft: item.isSubQuestion ? '4px solid var(--insta-primary)' : 'none'
               }}
             >
-              <ListItem
-                sx={{
-                  flexDirection: 'column',
-                  alignItems: 'flex-start',
-                  py: 1,
-                }}
-              >
-                <Box sx={{ width: '100%', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-                  <Box sx={{ flex: 1 }}>
-                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
-                      <Chip 
-                        label={question.questionNumber ? `Q${question.questionNumber}` : `Q${displayIndex + 1}`} 
-                        size="small" 
-                        color={item.isSubQuestion ? 'secondary' : 'primary'}
-                      />
-                      {item.isSubQuestion && (
-                        <Chip label="Sub-Question" size="small" variant="outlined" color="info" />
-                      )}
-                      <Chip label={question.questionType} size="small" variant="outlined" />
-                      <Chip label={question.option_type} size="small" />
-                      {question.validator_values?.required && (
-                        <Chip label="Required" size="small" color="error" />
-                      )}
-                    </Box>
-                    <Typography variant="h6" sx={{ mb: 1 }}>
-                      {question.questionNumber ? `${question.questionNumber}. ` : ''}{question.question}
-                    </Typography>
-                    <Typography variant="caption" color="text.secondary" display="block">
-                      ID: {question.questionId}
-                    </Typography>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                <div style={{ flex: 1 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 6 }}>
+                    <span style={{ border: '1px solid var(--insta-primary)', color: 'var(--insta-primary)', borderRadius: 10, padding: '2px 8px', fontSize: 12 }}>
+                      {question.questionNumber ? `Q${question.questionNumber}` : `Q${displayIndex + 1}`}
+                    </span>
                     {item.isSubQuestion && (
-                      <Typography variant="caption" color="text.secondary" display="block">
-                        Triggered by: {item.parentQuestion?.children}
-                      </Typography>
+                      <span style={{ border: '1px solid #888', color: '#555', borderRadius: 10, padding: '2px 8px', fontSize: 12 }}>Sub-Question</span>
                     )}
-                    {hasSubQuestions && (
-                      <Box sx={{ mt: 1 }}>
-                        <Chip 
-                          label={`${question.subQuestions.length} sub-question${question.subQuestions.length !== 1 ? 's' : ''}`}
-                          size="small" 
-                          color="info"
-                        />
-                        <Typography variant="caption" color="text.secondary" sx={{ ml: 1 }}>
-                          (Triggered by: {question.children})
-                        </Typography>
-                      </Box>
+                    <span style={{ border: '1px solid var(--insta-primary)', color: 'var(--insta-primary)', borderRadius: 10, padding: '2px 8px', fontSize: 12 }}>{question.questionType}</span>
+                    <span style={{ border: '1px solid #ccc', color: '#555', borderRadius: 10, padding: '2px 8px', fontSize: 12 }}>{question.option_type}</span>
+                    {question.validator_values?.required && (
+                      <span style={{ border: '1px solid var(--insta-red)', color: 'var(--insta-red)', borderRadius: 10, padding: '2px 8px', fontSize: 12 }}>Required</span>
                     )}
-                  </Box>
-                  <Box sx={{ display: 'flex', gap: 1 }}>
-                    <IconButton
-                      onClick={() => handleEditQuestion(
-                        item.originalIndex, 
-                        item.isSubQuestion ? item.subIndex : null
-                      )}
-                      color="primary"
-                      size="small"
-                      title={item.isSubQuestion ? "Edit sub-question" : "Edit question"}
-                    >
-                      <EditIcon />
-                    </IconButton>
-                    <IconButton
-                      onClick={() => handleDeleteQuestion(
-                        item.originalIndex,
-                        item.isSubQuestion ? item.subIndex : null
-                      )}
-                      color="error"
-                      size="small"
-                      title={item.isSubQuestion ? "Delete sub-question" : "Delete question"}
-                    >
-                      <DeleteIcon />
-                    </IconButton>
-                  </Box>
-                </Box>
-              </ListItem>
-            </Card>
+                  </div>
+                  <div style={{ fontWeight: 700, marginBottom: 6 }}>
+                    {question.questionNumber ? `${question.questionNumber}. ` : ''}{question.question}
+                  </div>
+                  <div style={{ fontSize: 12, color: 'var(--insta-muted)' }}>ID: {question.questionId}</div>
+                  {item.isSubQuestion && (
+                    <div style={{ fontSize: 12, color: 'var(--insta-muted)' }}>Triggered by: {item.parentQuestion?.children}</div>
+                  )}
+                  {hasSubQuestions && (
+                    <div style={{ marginTop: 6, display: 'flex', alignItems: 'center', gap: 6 }}>
+                      <span style={{ border: '1px solid #6aa3ff', color: '#2764c7', borderRadius: 10, padding: '2px 8px', fontSize: 12 }}>
+                        {question.subQuestions.length} sub-question{question.subQuestions.length !== 1 ? 's' : ''}
+                      </span>
+                      <span style={{ fontSize: 12, color: 'var(--insta-muted)' }}>(Triggered by: {question.children})</span>
+                    </div>
+                  )}
+                </div>
+                <div style={{ display: 'flex', gap: 6 }}>
+                  <button
+                    className="insta-button"
+                    style={{ background: '#fff', color: 'var(--insta-primary)', border: '1px solid var(--insta-primary)' }}
+                    onClick={() => handleEditQuestion(
+                      item.originalIndex, 
+                      item.isSubQuestion ? item.subIndex : null
+                    )}
+                    title={item.isSubQuestion ? 'Edit sub-question' : 'Edit question'}
+                  >
+                    Edit
+                  </button>
+                  <button
+                    className="insta-button"
+                    style={{ background: '#fff', color: 'var(--insta-red)', border: '1px solid var(--insta-red)' }}
+                    onClick={() => handleDeleteQuestion(
+                      item.originalIndex,
+                      item.isSubQuestion ? item.subIndex : null
+                    )}
+                    title={item.isSubQuestion ? 'Delete sub-question' : 'Delete question'}
+                  >
+                    Delete
+                  </button>
+                </div>
+              </div>
+            </div>
           );
         })}
-      </List>
+      </div>
     );
   };
 
@@ -352,26 +302,22 @@ const FormEditor = ({ formData, onFormUpdated, onCancel }) => {
     } : null;
     
     return (
-      <Box maxWidth="1400px" margin="0 auto" padding={3}>
-        <Paper elevation={3} sx={{ padding: 4 }}>
-          <Box display="flex" justifyContent="space-between" alignItems="center" marginBottom={3}>
-            <Typography variant="h5">
+      <div className="insta-page" style={{ paddingTop: 12 }}>
+        <div className="insta-card" style={{ maxWidth: 1200, margin: '0 auto', padding: 16 }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
+            <div style={{ fontWeight: 700, fontSize: 18 }}>
               {editingSubQuestion !== null ? '✏️ Edit Sub-Question' : 
                editingQuestionIndex !== null ? '✏️ Edit Question' : '➕ Add New Question'}
-            </Typography>
-            <Button
-              variant="outlined"
-              startIcon={<BackIcon />}
-              onClick={handleCancelQuestionEdit}
-            >
+            </div>
+            <button className="insta-button" style={{ background: '#fff', color: 'var(--insta-primary)', border: '1px solid var(--insta-primary)' }} onClick={handleCancelQuestionEdit}>
               Back to List
-            </Button>
-          </Box>
+            </button>
+          </div>
 
           {error && (
-            <Alert severity="error" sx={{ marginBottom: 3 }}>
+            <div style={{ marginBottom: 12, color: 'var(--insta-red)', background: '#ffeef0', padding: 12, borderRadius: 8 }}>
               {error}
-            </Alert>
+            </div>
           )}
 
           <FormBuilder
@@ -379,110 +325,79 @@ const FormEditor = ({ formData, onFormUpdated, onCancel }) => {
             onFormCreated={handleQuestionSaved}
             disableAddQuestion={true}
           />
-        </Paper>
-      </Box>
+        </div>
+      </div>
     );
   }
 
   // Main list view
   return (
-    <Box maxWidth="1400px" margin="0 auto" padding={3}>
-      <Paper elevation={3} sx={{ padding: 4 }}>
-        <Box display="flex" justifyContent="space-between" alignItems="center" marginBottom={3}>
-          <Box>
-            <Typography variant="h4" gutterBottom>
-              Edit Form: {formData.title}
-            </Typography>
-            <Typography variant="body2" color="text.secondary">
-              {formData.description}
-            </Typography>
-          </Box>
-          <Box display="flex" gap={2}>
-            <Button
-              variant="outlined"
-              onClick={onCancel}
-            >
-              Cancel
-            </Button>
-            <Button
-              variant="contained"
-              startIcon={<SaveIcon />}
-              onClick={handleSaveForm}
-              disabled={loading}
-            >
-              {loading ? <CircularProgress size={24} /> : 'Save Form'}
-            </Button>
-          </Box>
-        </Box>
+    <div className="insta-page" style={{ paddingTop: 12 }}>
+      <div className="insta-card" style={{ maxWidth: 1200, margin: '0 auto', padding: 16 }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
+          <div>
+            <div style={{ fontWeight: 800, fontSize: 22 }}>Edit Form: {formData.title}</div>
+            <div style={{ color: 'var(--insta-muted)' }}>{formData.description}</div>
+          </div>
+          <div style={{ display: 'flex', gap: 8 }}>
+            <button className="insta-button" style={{ background: '#fff', color: 'var(--insta-primary)', border: '1px solid var(--insta-primary)' }} onClick={onCancel}>Cancel</button>
+            <button className="insta-button" onClick={handleSaveForm} disabled={loading}>{loading ? 'Saving...' : 'Save Form'}</button>
+          </div>
+        </div>
 
         {error && (
-          <Alert severity="error" sx={{ marginBottom: 3 }}>
+          <div style={{ marginBottom: 12, color: 'var(--insta-red)', background: '#ffeef0', padding: 12, borderRadius: 8 }}>
             {error}
-          </Alert>
+          </div>
         )}
 
         {success && (
-          <Alert severity="success" sx={{ marginBottom: 3 }}>
+          <div style={{ marginBottom: 12, color: 'green', background: '#eaf9ea', padding: 12, borderRadius: 8 }}>
             {success}
-          </Alert>
+          </div>
         )}
 
-        <Divider sx={{ my: 3 }} />
+        <div style={{ height: 1, background: 'var(--insta-border)', margin: '12px 0' }} />
 
-        <Box display="flex" justifyContent="space-between" alignItems="center" marginBottom={3}>
-          <Typography variant="h5">
-            Questions ({questions.length})
-          </Typography>
-          <Button
-            variant="outlined"
-            color="secondary"
-            onClick={autoRenumberQuestions}
-            disabled={questions.length === 0}
-          >
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
+          <div style={{ fontWeight: 700 }}>Questions ({questions.length})</div>
+          <button className="insta-button" style={{ background: '#fff', color: 'var(--insta-primary)', border: '1px solid var(--insta-primary)' }} onClick={autoRenumberQuestions} disabled={questions.length === 0}>
             Auto-ReArrange Questions
-          </Button>
-        </Box>
+          </button>
+        </div>
 
         {renderQuestionsList()}
-      </Paper>
+      </div>
 
-      {/* Delete Confirmation Dialog */}
-      <Dialog
-        open={deleteDialogOpen}
-        onClose={() => setDeleteDialogOpen(false)}
-      >
-        <DialogTitle>Delete Question</DialogTitle>
-        <DialogContent>
-          <Typography>
-            Are you sure you want to delete this question? This action cannot be undone.
-          </Typography>
-          {questionToDelete !== null && (
-            <Box sx={{ mt: 2, p: 2, bgcolor: 'grey.100', borderRadius: 1 }}>
-              <Typography variant="body2" fontWeight="bold">
-                {questionToDelete.subIndex !== null
-                  ? questions[questionToDelete.parentIndex]?.subQuestions[questionToDelete.subIndex]?.question
-                  : questions[questionToDelete.parentIndex]?.question}
-              </Typography>
-              {questionToDelete.subIndex !== null && (
-                <Typography variant="caption" color="text.secondary" display="block" sx={{ mt: 1 }}>
-                  This is a sub-question. Only the sub-question will be deleted.
-                </Typography>
-              )}
-            </Box>
-          )}
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setDeleteDialogOpen(false)}>Cancel</Button>
-          <Button 
-            onClick={confirmDelete} 
-            color="error"
-            variant="contained"
-          >
-            Delete
-          </Button>
-        </DialogActions>
-      </Dialog>
-    </Box>
+      {deleteDialogOpen && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.4)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 }}>
+          <div className="insta-card" style={{ width: '90%', maxWidth: 520, padding: 16 }}>
+            <div style={{ fontWeight: 700, marginBottom: 8 }}>Delete Question</div>
+            <div style={{ color: 'var(--insta-muted)' }}>
+              Are you sure you want to delete this question? This action cannot be undone.
+            </div>
+            {questionToDelete !== null && (
+              <div style={{ marginTop: 12, padding: 10, background: '#f8fafc', borderRadius: 8 }}>
+                <div style={{ fontWeight: 600 }}>
+                  {questionToDelete.subIndex !== null
+                    ? questions[questionToDelete.parentIndex]?.subQuestions[questionToDelete.subIndex]?.question
+                    : questions[questionToDelete.parentIndex]?.question}
+                </div>
+                {questionToDelete.subIndex !== null && (
+                  <div style={{ fontSize: 12, color: 'var(--insta-muted)', marginTop: 6 }}>
+                    This is a sub-question. Only the sub-question will be deleted.
+                  </div>
+                )}
+              </div>
+            )}
+            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, marginTop: 12 }}>
+              <button className="insta-button" style={{ background: '#fff', color: 'var(--insta-primary)', border: '1px solid var(--insta-primary)' }} onClick={() => setDeleteDialogOpen(false)}>Cancel</button>
+              <button className="insta-button" style={{ background: 'var(--insta-red)' }} onClick={confirmDelete}>Delete</button>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
   );
 };
 

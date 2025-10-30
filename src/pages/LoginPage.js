@@ -1,18 +1,7 @@
 import React, { useState } from 'react';
-import {
-  Container,
-  Paper,
-  TextField,
-  Button,
-  Typography,
-  Box,
-  Alert,
-  InputAdornment,
-  IconButton
-} from '@mui/material';
-import { Visibility, VisibilityOff, Login as LoginIcon } from '@mui/icons-material';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
+import '../ui/insta/_form.scss';
 
 const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000/api';
 
@@ -49,89 +38,71 @@ function LoginPage() {
   };
 
   return (
-    <Container maxWidth="sm">
-      <Box
-        sx={{
-          minHeight: '100vh',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center'
-        }}
-      >
-        <Paper elevation={3} sx={{ p: 4, width: '100%' }}>
-          <Box sx={{ textAlign: 'center', mb: 3 }}>
-            <LoginIcon sx={{ fontSize: 48, color: 'primary.main', mb: 2 }} />
-            <Typography variant="h4" component="h1" gutterBottom>
-              Admin Login
-            </Typography>
-            <Typography variant="body2" color="text.secondary">
-              Sign in to access the form builder
-            </Typography>
-          </Box>
+    <div className="insta-page" style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '12px' }}>
+      <div className="insta-card" style={{ width: '100%', maxWidth: 520, padding: 20 }}>
+        <div style={{ textAlign: 'center', marginBottom: 12 }}>
+          <div style={{ fontSize: 28, fontWeight: 800, color: 'var(--insta-primary)', marginBottom: 6 }}>Admin Login</div>
+          <div style={{ color: 'var(--insta-muted)', fontSize: 14 }}>Sign in to access the form builder</div>
+        </div>
 
-          {error && (
-            <Alert severity="error" sx={{ mb: 3 }}>
-              {error}
-            </Alert>
-          )}
+        {error && (
+          <div style={{ marginBottom: 12, color: 'var(--insta-red)', background: '#ffeef0', padding: 12, borderRadius: 8 }}>
+            {error}
+          </div>
+        )}
 
-          <form onSubmit={handleSubmit}>
-            <TextField
-              fullWidth
-              label="User ID"
-              variant="outlined"
+        <form onSubmit={handleSubmit}>
+          <div className="ui-input-wrapper">
+            <label className="ui-input-label">User ID *</label>
+            <input
+              className="ui-input"
+              type="text"
               value={userId}
               onChange={(e) => setUserId(e.target.value)}
-              margin="normal"
+              autoComplete="username"
               required
               autoFocus
-              autoComplete="username"
+              style={{ boxSizing: 'border-box', width: '100%' }}
             />
+          </div>
 
-            <TextField
-              fullWidth
-              label="Password"
-              type={showPassword ? 'text' : 'password'}
-              variant="outlined"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              margin="normal"
-              required
-              autoComplete="current-password"
-              InputProps={{
-                endAdornment: (
-                  <InputAdornment position="end">
-                    <IconButton
-                      onClick={() => setShowPassword(!showPassword)}
-                      edge="end"
-                    >
-                      {showPassword ? <VisibilityOff /> : <Visibility />}
-                    </IconButton>
-                  </InputAdornment>
-                )
-              }}
-            />
+          <div className="ui-input-wrapper">
+            <label className="ui-input-label">Password *</label>
+            <div style={{ position: 'relative', maxWidth: '100%', overflow: 'hidden' }}>
+              <input
+                className="ui-input"
+                type={showPassword ? 'text' : 'password'}
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                autoComplete="current-password"
+                required
+                style={{ paddingRight: 88, boxSizing: 'border-box', width: '100%' }}
+              />
+              <button
+                type="button"
+                onClick={() => setShowPassword(!showPassword)}
+                style={{ position: 'absolute', right: 8, top: '50%', transform: 'translateY(-50%)', background: '#f5f9ff', border: '1px solid var(--insta-border)', borderRadius: 8, padding: '4px 10px', cursor: 'pointer', color: 'var(--insta-primary)', height: 28, lineHeight: '20px' }}
+              >
+                {showPassword ? 'Hide' : 'Show'}
+              </button>
+            </div>
+          </div>
 
-            <Button
-              type="submit"
-              fullWidth
-              variant="contained"
-              size="large"
-              disabled={loading}
-              sx={{ mt: 3, mb: 2 }}
-            >
-              {loading ? 'Signing in...' : 'Sign In'}
-            </Button>
-          </form>
+          <button
+            type="submit"
+            className="insta-button"
+            disabled={loading}
+            style={{ width: '100%', marginTop: 12 }}
+          >
+            {loading ? 'Signing in...' : 'Sign In'}
+          </button>
+        </form>
 
-          <Box sx={{ mt: 3, p: 2, bgcolor: 'grey.100', borderRadius: 1 }}>
-            <Typography variant="caption" color="text.secondary">
-              <strong>Note:</strong> Only authorized administrators can access the form builder.
-            </Typography>
-          </Box>
-        </Paper>
-      </Box>
-    </Container>
+        <div style={{ marginTop: 12, padding: 12, background: '#f7f7f8', borderRadius: 8, color: 'var(--insta-muted)', fontSize: 12 }}>
+          <strong>Note:</strong> Only authorized administrators can access the form builder.
+        </div>
+      </div>
+    </div>
   );
 }
 

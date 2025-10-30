@@ -1,4 +1,5 @@
 import React from 'react'
+import ReactDOM from 'react-dom'
 import PropTypes from 'prop-types'
 import DatePicker from 'react-date-picker'
 
@@ -132,3 +133,47 @@ export function TextAreaField({label, afterLabel = null, value, onChange, rows =
 const InstaForm = { InputField, DateField, SelectField, CheckboxGroup, TextAreaField };
 
 export default InstaForm;
+
+// Instainsure-like UiModal with portal
+export const UiModal = ({ isShowing, hide, ...props }) => {
+  let needHeader = !props.noHeader || false;
+  const handleClick = (event) => {
+    if (event.target.closest('.modal') === null) {
+      hide();
+    }
+  };
+  return isShowing
+    ? ReactDOM.createPortal(
+        <React.Fragment>
+          <div className="modal-overlay" onClick={hide} />
+          <div
+            className="modal-wrapper"
+            aria-modal
+            aria-hidden
+            tabIndex={-1}
+            role="dialog"
+            id={props.id || null}
+            onClick={handleClick}
+          >
+            <div className="modal">
+              {needHeader && (
+                <div className="modal-header">
+                  <button
+                    type="button"
+                    className="modal-close-button"
+                    data-dismiss="modal"
+                    aria-label="Close"
+                    onClick={hide}
+                  >
+                    <span aria-hidden="true">&times;</span>
+                  </button>
+                </div>
+              )}
+              {props.children}
+            </div>
+          </div>
+        </React.Fragment>,
+        document.body
+      )
+    : null;
+};

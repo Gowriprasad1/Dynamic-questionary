@@ -1,15 +1,14 @@
-import React from 'react';
-import { useLocation, useNavigate } from 'react-router-dom';
-import { Container, Paper, Box, Typography, Button } from '@mui/material';
+import React, { useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useSelector, useDispatch } from 'react-redux';
 import { clearAnswers } from '../store/actions';
 import '../ui/insta/_form.scss';
-import jsPDF from 'jspdf';
+import BasicDetailsIcon from '../assets/icons/BasicDetailsIcon.svg';
 
 const ReviewPage = () => {
-  const location = useLocation();
   const navigate = useNavigate();
   const dispatch = useDispatch();
+  const [submitting, setSubmitting] = useState(false);
   const reduxAnswers = useSelector(state => state.answers || {});
   const reduxUser = useSelector(state => state.user || {});
   const reduxQuestions = useSelector(state => state.questions || []);
@@ -21,18 +20,35 @@ const ReviewPage = () => {
     reduxUser?.applicationNumber ||
     '';
   const mobile = reduxUser?.Mobile || '';
+  // Handle browser back button to navigate to category page
+  useEffect(() => {
+    const handlePopState = () => {
+      navigate(`/${category}`);
+    };
+    
+    window.addEventListener('popstate', handlePopState);
+    
+    return () => {
+      window.removeEventListener('popstate', handlePopState);
+    };
+  }, [category, navigate]);
 
   // Early exit if no answers found
   if (!answers || Object.keys(answers).length === 0) {
     return (
-      <Container sx={{ mt: 6 }}>
-        <Paper sx={{ p: 4 }}>
-          <Typography variant="h6">No review data found</Typography>
-          <Button variant="contained" onClick={() => navigate('/')}>
-            Go Home
-          </Button>
-        </Paper>
-      </Container>
+      <div className="insta-page" style={{ paddingTop: 24 }}>
+        <div style={{ maxWidth: 820, margin: '0 auto', padding: '16px' }}>
+          <div className="insta-card" style={{ padding: 24 }}>
+            <div style={{ fontSize: 18, fontWeight: 700, marginBottom: 12 }}>No review data found</div>
+            <button className="insta-button" onClick={() => navigate('/')}>Go Home</button>
+            {submitting && (
+        <div className="screen-loader">
+          <div className="spinner" />
+        </div>
+      )}
+    </div>
+        </div>
+      </div>
     );
   }
 
@@ -52,7 +68,9 @@ const ReviewPage = () => {
   };
 
   const handleSubmitFinal = async () => {
+    if (submitting) return;
     try {
+      setSubmitting(true);
       // Transform answers from object to array of objects with question, answer, and questionId
       const answersArray = Object.entries(answers || {}).map(([questionId, answer]) => {
         return {
@@ -82,147 +100,83 @@ const ReviewPage = () => {
     } catch (err) {
       console.error('submit final error', err);
       alert('Failed to submit. Please try again later.');
-    }
+    } finally { setSubmitting(false); }
   };
 
-  const handleDownload = () => {
-    const doc = new jsPDF();
-    let y = 14;
-    doc.setFontSize(14);
-    doc.text(`Application Number: ${appNumber || ''}`, 14, y);
-    y += 8;
-    doc.text(`Mobile: ${mobile || ''}`, 14, y);
-    y += 12;
-    doc.setFontSize(12);
-    doc.text(`Category: ${category}`, 14, y);
-    y += 10;
-
-    Object.keys(answers || {}).forEach((key, idx) => {
-      const q = qMap[key] || key;
-      let ans = answers[key];
-      if (typeof ans === 'object') ans = JSON.stringify(ans);
-
-      // Question text
-      doc.setFontSize(12);
-      const questionLine = `${idx + 1}. ${q}`;
-      const qSplit = doc.splitTextToSize(questionLine, 180);
-      doc.text(qSplit, 14, y);
-      y += qSplit.length * 7;
-
-      // Answer text
-      doc.setFontSize(11);
-      const answerLine = `Answer: ${ans}`;
-      const aSplit = doc.splitTextToSize(answerLine, 170);
-      const indented = aSplit.map(ln => `  ${ln}`);
-      doc.text(indented, 18, y);
-      y += aSplit.length * 6 + 6;
-
-      if (y > 270) {
-        doc.addPage();
-        y = 14;
-      }
-    });
-
-    doc.save(`${category || 'submission'}-${appNumber || 'unknown'}.pdf`);
-  };
+  // Edit function moved to icon in top right corner
 
   return (
-    <Container maxWidth="md" sx={{ py: 4 }}>
-      <Paper
-        elevation={3}
-        className="insta-card"
-        sx={{ p: { xs: 3, md: 5 }, position: 'relative' }}
-      >
-        <div className="insta-page-header">
-          <div className="insta-header-icon">
-            <svg
-              width="36"
-              height="36"
-              viewBox="0 0 24 24"
-              fill="none"
-              xmlns="http://www.w3.org/2000/svg"
-            >
-              <rect
-                x="4"
-                y="4"
-                width="16"
-                height="16"
-                rx="2"
-                stroke="#005e9e"
-                strokeWidth="1.2"
-                fill="#fff"
-              />
-              <path
-                d="M7 9h10"
-                stroke="#005e9e"
-                strokeWidth="1.2"
-                strokeLinecap="round"
-              />
-              <path
-                d="M7 13h6"
-                stroke="#005e9e"
-                strokeWidth="1.2"
-                strokeLinecap="round"
-              />
-            </svg>
-          </div>
-          <div>
-            <div className="insta-header-title">Review your answers</div>
-            <div className="insta-header-sub">
-              Please verify your information before final submission
+    <div className="insta-page" style={{ paddingTop: 24 }}>
+      <div style={{ maxWidth: 820, margin: '0 auto', padding: '16px' }}>
+        <div className="insta-card" style={{ padding: 24 }}>
+
+          <div className="insta-page-header">
+            <div className="insta-header-icon">
+              <img src={BasicDetailsIcon} alt="Basic details" style={{ width: 60, height: 60 }} />
             </div>
-            <div className="insta-header-underline" />
+            <div>
+              <div className="insta-header-title">Review your answers</div>
+              <div className="insta-header-sub">Please verify your information before final submission</div>
+              <div className="insta-header-underline" />
+            </div>
+          </div>
+
+          <div style={{ marginTop: 12 }}>
+            <div style={{ marginBottom: 12, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
+              <div>
+                Application Number: <strong>{appNumber}</strong>
+              </div>
+              <button className="insta-edit-chip" onClick={handleEdit} aria-label="Edit">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25z" stroke="currentColor" fill="currentColor"/>
+                  <path d="M20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34a1 1 0 0 0-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z" fill="currentColor"/>
+                </svg>
+                Edit
+              </button>
+            </div>
+            <div style={{ marginBottom: 12 }}>
+              Mobile: <strong>{mobile}</strong>
+            </div>
+
+            <div style={{ marginTop: 8 }}>
+              {Object.keys(answers || {}).map((key) => {
+                const qLabel = qMap[key] || key;
+                return (
+                  <div
+                    key={key}
+                    style={{
+                      marginBottom: 12,
+                      padding: 12,
+                      border: '1px solid var(--insta-border)',
+                      borderRadius: 6,
+                    }}
+                  >
+                    <div style={{ fontWeight: 600, marginBottom: 6 }}>{qLabel}</div>
+                    <div style={{ color: 'var(--insta-muted)' }}>
+                      {typeof answers[key] === 'object'
+                        ? JSON.stringify(answers[key])
+                        : String(answers[key])}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+
+            <div className="desktop-cta" style={{ justifyContent: 'center', marginTop: 16 }}>
+              <button className="insta-button" onClick={handleSubmitFinal} disabled={submitting}>
+                {submitting ? 'SUBMITTING...' : 'Submit'}
+              </button>
+            </div>
           </div>
         </div>
-
-        <Box sx={{ mt: 3 }}>
-          <Typography variant="body1" sx={{ mb: 2 }}>
-            Application Number: <strong>{appNumber}</strong>
-          </Typography>
-          <Typography variant="body1" sx={{ mb: 2 }}>
-            Mobile: <strong>{mobile}</strong>
-          </Typography>
-
-          <Box sx={{ mt: 2 }}>
-            {Object.keys(answers || {}).map((key, idx) => {
-              const qLabel = qMap[key] || key;
-              return (
-                <Box
-                  key={key}
-                  sx={{
-                    mb: 2,
-                    p: 2,
-                    border: '1px solid var(--insta-border)',
-                    borderRadius: 1,
-                  }}
-                >
-                  <Typography variant="subtitle2">{qLabel}</Typography>
-                  <Typography variant="body2" color="text.secondary">
-                    {typeof answers[key] === 'object'
-                      ? JSON.stringify(answers[key])
-                      : String(answers[key])}
-                  </Typography>
-                </Box>
-              );
-            })}
-          </Box>
-
-          <Box
-            sx={{ display: 'flex', gap: 2, justifyContent: 'center', mt: 3 }}
-          >
-            <Button variant="outlined" onClick={handleEdit}>
-              Edit
-            </Button>
-            <Button variant="contained" color="secondary" onClick={handleDownload}>
-              Download
-            </Button>
-            <Button variant="contained" color="primary" onClick={handleSubmitFinal}>
-              Submit
-            </Button>
-          </Box>
-        </Box>
-      </Paper>
-    </Container>
+      </div>
+      {/* Mobile-only footer CTA */}
+      <div className="insta-footer">
+        <button className="insta-proceed mobile-cta proceed-btn" onClick={handleSubmitFinal} disabled={submitting}>
+          {submitting ? 'SUBMITTING...' : 'PROCEED'}
+        </button>
+      </div>
+    </div>
   );
 };
 

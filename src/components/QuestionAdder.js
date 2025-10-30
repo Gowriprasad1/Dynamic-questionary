@@ -1,28 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import {
-  Box,
-  Paper,
-  Typography,
-  TextField,
-  Button,
-  FormControl,
-  InputLabel,
-  Select,
-  MenuItem,
-  IconButton,
-  Alert,
-  CircularProgress,
-  Accordion,
-  AccordionSummary,
-  AccordionDetails,
-  Chip,
-} from '@mui/material';
-import {
-  Add as AddIcon,
-  Delete as DeleteIcon,
-  ExpandMore as ExpandMoreIcon,
-  CheckCircle as ValidationIcon,
-} from '@mui/icons-material';
+import '../ui/insta/_form.scss';
 import { categoriesAPI } from '../services/api';
 
 const QuestionAdder = ({ category, onQuestionAdded, onCancel }) => {
@@ -388,111 +365,74 @@ const QuestionAdder = ({ category, onQuestionAdded, onCancel }) => {
     }
 
     return (
-      <Box sx={{ marginTop: 2 }}>
-        <Typography variant="subtitle2" gutterBottom>
-          Options:
-        </Typography>
+      <div style={{ marginTop: 8 }}>
+        <div style={{ fontWeight: 600, marginBottom: 6 }}>Options:</div>
         {question.options?.map((option, optionIndex) => (
-          <Box key={optionIndex} display="flex" alignItems="center" marginBottom={1} gap={1}>
-            <TextField
-              size="small"
-              label="Key"
+          <div key={optionIndex} style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
+            <input
+              className="ui-input"
+              placeholder={`Option key ${optionIndex + 1}`}
               value={option.key}
               onChange={(e) => updateOption(optionIndex, 'key', e.target.value)}
-              placeholder={`Option key ${optionIndex + 1}`}
-              sx={{ flex: 1 }}
+              style={{ flex: 1 }}
             />
-            <TextField
-              size="small"
-              label="Value"
+            <input
+              className="ui-input"
+              placeholder={`Option value ${optionIndex + 1}`}
               value={option.val}
               onChange={(e) => updateOption(optionIndex, 'val', e.target.value)}
-              placeholder={`Option value ${optionIndex + 1}`}
-              sx={{ flex: 1 }}
+              style={{ flex: 1 }}
             />
-            <IconButton
-              size="small"
-              onClick={() => removeOption(optionIndex)}
-              color="error"
-            >
-              <DeleteIcon />
-            </IconButton>
-          </Box>
+            <button className="insta-button" style={{ background: '#fff', color: 'var(--insta-red)', border: '1px solid var(--insta-red)' }} onClick={() => removeOption(optionIndex)}>Delete</button>
+          </div>
         ))}
-        <Button
-          size="small"
-          startIcon={<AddIcon />}
-          onClick={addOption}
-        >
-          Add Option
-        </Button>
-      </Box>
+        <button className="insta-button" onClick={addOption}>Add Option</button>
+      </div>
     );
   };
 
   const renderValidatorSection = () => {
     return (
-      <Accordion>
-        <AccordionSummary expandIcon={<ExpandMoreIcon />}>
-          <Box display="flex" alignItems="center" gap={1}>
-            <ValidationIcon />
-            <Typography>Validation Rules</Typography>
-            <Box display="flex" gap={0.5}>
-              {question.validator_options?.map((option) => (
-                <Chip key={option} label={option} size="small" color="primary" />
-              ))}
-            </Box>
-          </Box>
-        </AccordionSummary>
-        <AccordionDetails>
-          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-            {/* Validator Options Selection */}
-            <Box>
-              <Typography variant="subtitle2" gutterBottom>
-                Select Validators:
-              </Typography>
-              <Box display="flex" flexWrap="wrap" gap={1}>
-                {validatorTypes.map((validatorType) => (
-                  <Chip
-                    key={validatorType}
-                    label={validatorType}
-                    size="small"
-                    onClick={() => toggleValidatorOption(validatorType)}
-                    color={question.validator_options?.includes(validatorType) ? 'primary' : 'default'}
-                    variant={question.validator_options?.includes(validatorType) ? 'filled' : 'outlined'}
-                  />
-                ))}
-              </Box>
-            </Box>
-
-            {/* Validator Values */}
-            {question.validator_options?.map((validatorType) => (
-              <Box key={validatorType}>
-                <Typography variant="caption" gutterBottom display="block">
-                  {validatorType.charAt(0).toUpperCase() + validatorType.slice(1)} Validator:
-                </Typography>
-                <Box display="flex" gap={1}>
-                  <TextField
-                    size="small"
-                    label={`${validatorType} value`}
-                    value={question.validator_values[validatorType] || ''}
-                    onChange={(e) => updateValidatorValue(validatorType, e.target.value)}
-                    type={['max', 'min', 'maxLength', 'minLength'].includes(validatorType) ? 'number' : 'text'}
-                    sx={{ flex: 1 }}
-                  />
-                  <TextField
-                    size="small"
-                    label="Error message"
-                    value={question.error_messages[validatorType] || ''}
-                    onChange={(e) => updateErrorMessage(validatorType, e.target.value)}
-                    sx={{ flex: 1 }}
-                  />
-                </Box>
-              </Box>
-            ))}
-          </Box>
-        </AccordionDetails>
-      </Accordion>
+      <div style={{ marginTop: 12 }}>
+        <div style={{ fontWeight: 700, marginBottom: 6 }}>Validation Rules</div>
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginBottom: 8 }}>
+          {validatorTypes.map((validatorType) => (
+            <button
+              key={validatorType}
+              type="button"
+              className="insta-button"
+              style={{ background: question.validator_options?.includes(validatorType) ? 'var(--insta-primary)' : '#fff', color: question.validator_options?.includes(validatorType) ? '#fff' : 'var(--insta-primary)', border: '1px solid var(--insta-primary)' }}
+              onClick={() => toggleValidatorOption(validatorType)}
+            >
+              {validatorType}
+            </button>
+          ))}
+        </div>
+        {question.validator_options?.map((validatorType) => (
+          <div key={validatorType} style={{ marginBottom: 8 }}>
+            <div style={{ fontSize: 12, color: 'var(--insta-muted)', marginBottom: 4 }}>
+              {validatorType.charAt(0).toUpperCase() + validatorType.slice(1)} Validator
+            </div>
+            <div style={{ display: 'flex', gap: 8 }}>
+              <input
+                className="ui-input"
+                placeholder={`${validatorType} value`}
+                value={question.validator_values[validatorType] || ''}
+                onChange={(e) => updateValidatorValue(validatorType, e.target.value)}
+                type={['max', 'min', 'maxLength', 'minLength'].includes(validatorType) ? 'number' : 'text'}
+                style={{ flex: 1 }}
+              />
+              <input
+                className="ui-input"
+                placeholder="Error message"
+                value={question.error_messages[validatorType] || ''}
+                onChange={(e) => updateErrorMessage(validatorType, e.target.value)}
+                style={{ flex: 1 }}
+              />
+            </div>
+          </div>
+        ))}
+      </div>
     );
   };
 
@@ -502,45 +442,29 @@ const QuestionAdder = ({ category, onQuestionAdded, onCancel }) => {
     }
 
     return (
-      <Box sx={{ marginTop: 2 }}>
-        <Typography variant="subtitle2" gutterBottom>
-          Options:
-        </Typography>
+      <div style={{ marginTop: 8 }}>
+        <div style={{ fontWeight: 600, marginBottom: 6 }}>Options:</div>
         {currentSubQuestion.options?.map((option, optionIndex) => (
-          <Box key={optionIndex} display="flex" alignItems="center" marginBottom={1} gap={1}>
-            <TextField
-              size="small"
-              label="Key"
+          <div key={optionIndex} style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
+            <input
+              className="ui-input"
+              placeholder={`Option key ${optionIndex + 1}`}
               value={option.key}
               onChange={(e) => updateSubQuestionOption(optionIndex, 'key', e.target.value)}
-              placeholder={`Option key ${optionIndex + 1}`}
-              sx={{ flex: 1 }}
+              style={{ flex: 1 }}
             />
-            <TextField
-              size="small"
-              label="Value"
+            <input
+              className="ui-input"
+              placeholder={`Option value ${optionIndex + 1}`}
               value={option.val}
               onChange={(e) => updateSubQuestionOption(optionIndex, 'val', e.target.value)}
-              placeholder={`Option value ${optionIndex + 1}`}
-              sx={{ flex: 1 }}
+              style={{ flex: 1 }}
             />
-            <IconButton
-              size="small"
-              onClick={() => removeSubQuestionOption(optionIndex)}
-              color="error"
-            >
-              <DeleteIcon />
-            </IconButton>
-          </Box>
+            <button className="insta-button" style={{ background: '#fff', color: 'var(--insta-red)', border: '1px solid var(--insta-red)' }} onClick={() => removeSubQuestionOption(optionIndex)}>Delete</button>
+          </div>
         ))}
-        <Button
-          size="small"
-          startIcon={<AddIcon />}
-          onClick={addSubQuestionOption}
-        >
-          Add Option
-        </Button>
-      </Box>
+        <button className="insta-button" onClick={addSubQuestionOption}>Add Option</button>
+      </div>
     );
   };
 
@@ -548,399 +472,261 @@ const QuestionAdder = ({ category, onQuestionAdded, onCancel }) => {
     if (!currentSubQuestion) return null;
 
     return (
-      <Accordion sx={{ mt: 2 }}>
-        <AccordionSummary expandIcon={<ExpandMoreIcon />}>
-          <Box display="flex" alignItems="center" gap={1}>
-            <ValidationIcon />
-            <Typography variant="body2">Validation Rules</Typography>
-            <Box display="flex" gap={0.5}>
-              {currentSubQuestion.validator_options?.map((option) => (
-                <Chip key={option} label={option} size="small" color="primary" />
-              ))}
-            </Box>
-          </Box>
-        </AccordionSummary>
-        <AccordionDetails>
-          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-            {/* Validator Options Selection */}
-            <Box>
-              <Typography variant="caption" gutterBottom display="block">
-                Select Validators:
-              </Typography>
-              <Box display="flex" flexWrap="wrap" gap={1}>
-                {validatorTypes.map((validatorType) => (
-                  <Chip
-                    key={validatorType}
-                    label={validatorType}
-                    size="small"
-                    onClick={() => toggleSubQuestionValidatorOption(validatorType)}
-                    color={currentSubQuestion.validator_options?.includes(validatorType) ? 'primary' : 'default'}
-                    variant={currentSubQuestion.validator_options?.includes(validatorType) ? 'filled' : 'outlined'}
-                  />
-                ))}
-              </Box>
-            </Box>
-
-            {/* Validator Values */}
-            {currentSubQuestion.validator_options?.map((validatorType) => (
-              <Box key={validatorType}>
-                <Typography variant="caption" gutterBottom display="block">
-                  {validatorType.charAt(0).toUpperCase() + validatorType.slice(1)} Validator:
-                </Typography>
-                <Box display="flex" gap={1}>
-                  <TextField
-                    size="small"
-                    label={`${validatorType} value`}
-                    value={currentSubQuestion.validator_values[validatorType] || ''}
-                    onChange={(e) => updateSubQuestionValidatorValue(validatorType, e.target.value)}
-                    type={['max', 'min', 'maxLength', 'minLength'].includes(validatorType) ? 'number' : 'text'}
-                    sx={{ flex: 1 }}
-                  />
-                  <TextField
-                    size="small"
-                    label="Error message"
-                    value={currentSubQuestion.error_messages[validatorType] || ''}
-                    onChange={(e) => updateSubQuestionErrorMessage(validatorType, e.target.value)}
-                    sx={{ flex: 1 }}
-                  />
-                </Box>
-              </Box>
-            ))}
-          </Box>
-        </AccordionDetails>
-      </Accordion>
+      <div style={{ marginTop: 12 }}>
+        <div style={{ fontWeight: 700, marginBottom: 6 }}>Validation Rules</div>
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginBottom: 8 }}>
+          {validatorTypes.map((validatorType) => (
+            <button
+              key={validatorType}
+              type="button"
+              className="insta-button"
+              style={{ background: currentSubQuestion.validator_options?.includes(validatorType) ? 'var(--insta-primary)' : '#fff', color: currentSubQuestion.validator_options?.includes(validatorType) ? '#fff' : 'var(--insta-primary)', border: '1px solid var(--insta-primary)' }}
+              onClick={() => toggleSubQuestionValidatorOption(validatorType)}
+            >
+              {validatorType}
+            </button>
+          ))}
+        </div>
+        {currentSubQuestion.validator_options?.map((validatorType) => (
+          <div key={validatorType} style={{ marginBottom: 8 }}>
+            <div style={{ fontSize: 12, color: 'var(--insta-muted)', marginBottom: 4 }}>
+              {validatorType.charAt(0).toUpperCase() + validatorType.slice(1)} Validator
+            </div>
+            <div style={{ display: 'flex', gap: 8 }}>
+              <input
+                className="ui-input"
+                placeholder={`${validatorType} value`}
+                value={currentSubQuestion.validator_values[validatorType] || ''}
+                onChange={(e) => updateSubQuestionValidatorValue(validatorType, e.target.value)}
+                type={['max', 'min', 'maxLength', 'minLength'].includes(validatorType) ? 'number' : 'text'}
+                style={{ flex: 1 }}
+              />
+              <input
+                className="ui-input"
+                placeholder="Error message"
+                value={currentSubQuestion.error_messages[validatorType] || ''}
+                onChange={(e) => updateSubQuestionErrorMessage(validatorType, e.target.value)}
+                style={{ flex: 1 }}
+              />
+            </div>
+          </div>
+        ))}
+      </div>
     );
   };
 
   const renderSubQuestionsSection = () => {
     if (!question.children) {
       return (
-        <Alert severity="info" sx={{ mt: 2 }}>
+        <div style={{ marginTop: 8, background: '#f1f5ff', border: '1px solid #cdddfd', padding: 10, borderRadius: 8, color: '#274c9b' }}>
           Set a trigger value in the "Children" field above to enable adding sub-questions.
-        </Alert>
+        </div>
       );
     }
 
     return (
-      <Box sx={{ mt: 2, p: 2, border: '2px solid #1976d2', borderRadius: 2, backgroundColor: '#f5f5f5' }}>
-        <Box display="flex" justifyContent="space-between" alignItems="center" mb={2}>
-          <Box>
-            <Typography variant="h6" color="primary">
-              Child Questions
-            </Typography>
-            <Typography variant="caption" color="text.secondary">
-              Possible trigger values: {question.children}
-            </Typography>
-          </Box>
-          <Button
-            variant="contained"
-            size="small"
-            startIcon={<AddIcon />}
-            onClick={addSubQuestion}
-            disabled={showSubQuestionForm}
-          >
-            Add Child Question
-          </Button>
-        </Box>
+      <div style={{ marginTop: 8, padding: 12, border: '1px solid var(--insta-primary)', borderRadius: 8, background: '#f8fafc' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
+          <div>
+            <div style={{ fontWeight: 700, color: 'var(--insta-primary)' }}>Child Questions</div>
+            <div style={{ fontSize: 12, color: 'var(--insta-muted)' }}>Possible trigger values: {question.children}</div>
+          </div>
+          <button className="insta-button" onClick={addSubQuestion} disabled={showSubQuestionForm}>Add Child Question</button>
+        </div>
 
         {/* List existing sub-questions */}
         {question.subQuestions.length > 0 && (
-          <Box sx={{ mb: 2 }}>
-            <Typography variant="subtitle2" gutterBottom>
-              Existing Child Questions:
-            </Typography>
+          <div style={{ marginBottom: 8 }}>
+            <div style={{ fontWeight: 600, marginBottom: 6 }}>Existing Child Questions:</div>
             {question.subQuestions.map((subQ, index) => (
-              <Box
-                key={index}
-                sx={{
-                  p: 2,
-                  mb: 1,
-                  border: '1px solid #ddd',
-                  borderRadius: 1,
-                  backgroundColor: 'white',
-                  display: 'flex',
-                  justifyContent: 'space-between',
-                  alignItems: 'center'
-                }}
-              >
-                <Box>
-                  <Typography variant="body2" fontWeight="600">
-                    {subQ.questionNumber ? `${subQ.questionNumber}. ` : ''}{subQ.question}
-                  </Typography>
-                  <Typography variant="caption" color="text.secondary">
-                    ID: {subQ.questionId} | Type: {subQ.option_type}
-                    {subQ.triggerValue && ` | Trigger: "${subQ.triggerValue}"`}
-                  </Typography>
-                </Box>
-                <IconButton
-                  size="small"
-                  onClick={() => removeSubQuestion(index)}
-                  color="error"
-                >
-                  <DeleteIcon />
-                </IconButton>
-              </Box>
+              <div key={index} style={{ padding: 10, marginBottom: 8, border: '1px solid var(--insta-border)', borderRadius: 8, background: '#fff', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <div>
+                  <div style={{ fontWeight: 600 }}>{subQ.questionNumber ? `${subQ.questionNumber}. ` : ''}{subQ.question}</div>
+                  <div style={{ fontSize: 12, color: 'var(--insta-muted)' }}>
+                    ID: {subQ.questionId} | Type: {subQ.option_type}{subQ.triggerValue ? ` | Trigger: "${subQ.triggerValue}"` : ''}
+                  </div>
+                </div>
+                <button className="insta-button" style={{ background: '#fff', color: 'var(--insta-red)', border: '1px solid var(--insta-red)' }} onClick={() => removeSubQuestion(index)}>Delete</button>
+              </div>
             ))}
-          </Box>
+          </div>
         )}
 
         {/* Sub-question form */}
         {showSubQuestionForm && currentSubQuestion && (
-          <Paper elevation={2} sx={{ p: 2, backgroundColor: 'white' }}>
-            <Typography variant="subtitle1" gutterBottom fontWeight="600">
-              New Child Question
-            </Typography>
+          <div className="insta-card" style={{ padding: 12, background: '#fff' }}>
+            <div style={{ fontWeight: 700, marginBottom: 6 }}>New Child Question</div>
             
-            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-              <TextField
-                fullWidth
-                label="Child Question Text"
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+              <input
+                className="ui-input"
+                placeholder="Child Question Text"
                 value={currentSubQuestion.question}
                 onChange={(e) => updateSubQuestion({ question: e.target.value })}
-                required
-                multiline
-                rows={2}
-                size="small"
               />
 
               {/* List Items for the new child question */}
-              <Box sx={{ mt: 1 }}>
-                <Typography variant="caption" gutterBottom>
-                  Question Lables
-                </Typography>
+              <div style={{ marginTop: 6 }}>
+                <div style={{ fontSize: 12, color: 'var(--insta-muted)', marginBottom: 4 }}>Question Lables</div>
                 {(currentSubQuestion.listItems || []).map((item, itemIndex) => (
-                  <Box key={itemIndex} display="flex" alignItems="center" gap={1} mb={1}>
-                    <TextField
-                      size="small"
-                      label={`Item ${itemIndex + 1}`}
+                  <div key={itemIndex} style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
+                    <input
+                      className="ui-input"
+                      placeholder={`Item ${itemIndex + 1}`}
                       value={item}
                       onChange={(e) => updateSubQuestionListItem(itemIndex, e.target.value)}
-                      placeholder={`List item ${itemIndex + 1}`}
-                      sx={{ flex: 1 }}
+                      style={{ flex: 1 }}
                     />
-                    <IconButton size="small" color="error" onClick={() => removeSubQuestionListItem(itemIndex)}>
-                      <DeleteIcon />
-                    </IconButton>
-                  </Box>
+                    <button className="insta-button" style={{ background: '#fff', color: 'var(--insta-red)', border: '1px solid var(--insta-red)' }} onClick={() => removeSubQuestionListItem(itemIndex)}>Delete</button>
+                  </div>
                 ))}
-                <Button size="small" startIcon={<AddIcon />} onClick={addSubQuestionListItem}>
-                  Add Lable
-                </Button>
-              </Box>
+                <button className="insta-button" onClick={addSubQuestionListItem}>Add Lable</button>
+              </div>
 
-              <TextField
-                fullWidth
-                label="Sub-Question Number"
+              <input
+                className="ui-input"
+                placeholder="Sub-Question Number (e.g., 1a, 1b, 2a)"
                 value={currentSubQuestion.questionNumber || ''}
                 onChange={(e) => updateSubQuestion({ questionNumber: e.target.value })}
-                size="small"
-                placeholder="e.g., 1a, 1b, 2a"
-                helperText="e.g., 1a, 1b, 2a"
               />
+              <div style={{ fontSize: 12, color: 'var(--insta-muted)' }}>e.g., 1a, 1b, 2a</div>
 
-              <Box sx={{ display: 'flex', gap: 2 }}>
-                <TextField
-                  fullWidth
-                  label="Question ID"
+              <div style={{ display: 'flex', gap: 8 }}>
+                <input
+                  className="ui-input"
+                  placeholder="Question ID"
                   value={currentSubQuestion.questionId}
                   onChange={(e) => updateSubQuestion({ questionId: e.target.value })}
                   required
-                  size="small"
-                  placeholder="e.g., health_sub_q1"
+                  style={{ flex: 1 }}
                 />
-
-                <FormControl fullWidth size="small">
-                  <InputLabel>Option Type</InputLabel>
-                  <Select
-                    value={currentSubQuestion.option_type}
-                    onChange={(e) => updateSubQuestion({ option_type: e.target.value })}
-                    label="Option Type"
-                  >
+                <div style={{ flex: 1 }}>
+                  <label className="ui-input-label" style={{ display: 'block', marginBottom: 4 }}>Option Type</label>
+                  <select className="ui-input" value={currentSubQuestion.option_type} onChange={(e) => updateSubQuestion({ option_type: e.target.value })}>
                     {fieldTypes.map((type) => (
-                      <MenuItem key={type.value} value={type.value}>
-                        {type.label}
-                      </MenuItem>
+                      <option key={type.value} value={type.value}>{type.label}</option>
                     ))}
-                  </Select>
-                </FormControl>
-              </Box>
+                  </select>
+                </div>
+              </div>
 
-              <TextField
-                fullWidth
-                label="Trigger Value (parent answer)"
+              <input
+                className="ui-input"
+                placeholder="Trigger Value (parent answer)"
                 value={currentSubQuestion.triggerValue || ''}
                 onChange={(e) => updateSubQuestion({ triggerValue: e.target.value })}
-                size="small"
-                placeholder="e.g., yes, salaried"
-                helperText="Which parent answer shows this sub-question"
               />
+              <div style={{ fontSize: 12, color: 'var(--insta-muted)' }}>Which parent answer shows this sub-question</div>
 
               {renderSubQuestionOptions()}
               {renderSubQuestionValidatorSection()}
 
-              <Box display="flex" justifyContent="flex-end" gap={1}>
-                <Button
-                  size="small"
-                  variant="outlined"
-                  onClick={cancelSubQuestion}
-                >
-                  Cancel
-                </Button>
-                <Button
-                  size="small"
-                  variant="contained"
-                  onClick={saveSubQuestion}
-                >
-                  Save Child Question
-                </Button>
-              </Box>
-            </Box>
-          </Paper>
+              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8 }}>
+                <button className="insta-button" style={{ background: '#fff', color: 'var(--insta-primary)', border: '1px solid var(--insta-primary)' }} onClick={cancelSubQuestion}>Cancel</button>
+                <button className="insta-button" onClick={saveSubQuestion}>Save Child Question</button>
+              </div>
+            </div>
+          </div>
         )}
-      </Box>
-    );
-  };
+    </div>
+  );
+};
 
   return (
-    <Paper elevation={3} sx={{ padding: 4 }}>
-      <Typography variant="h5" component="h2" gutterBottom>
-        Add New {category} Question
-      </Typography>
+    <div className="insta-card" style={{ padding: 16 }}>
+      <div style={{ fontWeight: 800, fontSize: 18, marginBottom: 8 }}>Add New {category} Question</div>
 
       {error && (
-        <Alert severity="error" sx={{ marginBottom: 3 }}>
+        <div style={{ marginBottom: 12, color: 'var(--insta-red)', background: '#ffeef0', padding: 12, borderRadius: 8 }}>
           {error}
-        </Alert>
+        </div>
       )}
 
       <form onSubmit={handleSubmit}>
-        <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2.5 }}>
-          {/* Question Text */}
-          <TextField
-            fullWidth
-            label="Question Text"
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+          <input
+            className="ui-input"
+            placeholder="Question Text"
             value={question.question}
             onChange={(e) => updateQuestion({ question: e.target.value })}
             required
-            multiline
-            rows={2}
-            variant="outlined"
           />
 
-          {/* List Items (ordered list content) for main question */}
-          <Box sx={{ mt: 1 }}>
-            <Typography variant="caption" gutterBottom>
-              Question Lables
-            </Typography>
+          <div>
+            <div style={{ fontSize: 12, color: 'var(--insta-muted)', marginBottom: 4 }}>Question Lables</div>
             {(question.listItems || []).map((item, itemIndex) => (
-              <Box key={itemIndex} display="flex" alignItems="center" gap={1} mb={1}>
-                <TextField
-                  size="small"
-                  label={`Item ${itemIndex + 1}`}
+              <div key={itemIndex} style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
+                <input
+                  className="ui-input"
+                  placeholder={`Item ${itemIndex + 1}`}
                   value={item}
                   onChange={(e) => updateListItem(itemIndex, e.target.value)}
-                  placeholder={`List item ${itemIndex + 1}`}
-                  sx={{ flex: 1 }}
+                  style={{ flex: 1 }}
                 />
-                <IconButton size="small" color="error" onClick={() => removeListItem(itemIndex)}>
-                  <DeleteIcon />
-                </IconButton>
-              </Box>
+                <button className="insta-button" style={{ background: '#fff', color: 'var(--insta-red)', border: '1px solid var(--insta-red)' }} onClick={() => removeListItem(itemIndex)} type="button">Delete</button>
+              </div>
             ))}
-            <Button size="small" startIcon={<AddIcon />} onClick={addListItem}>
-              Add Lable
-            </Button>
-          </Box>
+            <button className="insta-button" type="button" onClick={addListItem}>Add Lable</button>
+          </div>
 
-          {/* Row 1: Question Number */}
-          <TextField
-            fullWidth
-            label="Question Number"
+          <input
+            className="ui-input"
+            placeholder="Question Number"
             value={question.questionNumber}
             onChange={(e) => updateQuestion({ questionNumber: e.target.value })}
-            placeholder="e.g., 1, 2, 3"
-            helperText="Display number (e.g., 1, 2, 3)"
           />
+          <div style={{ fontSize: 12, color: 'var(--insta-muted)' }}>Display number (e.g., 1, 2, 3)</div>
 
-          {/* Row 2: Category and Question ID */}
-          <Box sx={{ display: 'flex', gap: 2 }}>
-            <FormControl fullWidth required>
-              <InputLabel>Category/Question Type</InputLabel>
-              <Select
-                value={question.questionType}
-                onChange={(e) => updateQuestion({ questionType: e.target.value })}
-                label="Category/Question Type"
-              >
+          <div style={{ display: 'flex', gap: 8 }}>
+            <div style={{ flex: 1 }}>
+              <label className="ui-input-label" style={{ display: 'block', marginBottom: 4 }}>Category/Question Type</label>
+              <select className="ui-input" value={question.questionType} onChange={(e) => updateQuestion({ questionType: e.target.value })} required>
                 {categories.map((cat) => (
-                  <MenuItem key={cat._id || cat.name} value={cat.name}>
-                    {cat.name}
-                  </MenuItem>
+                  <option key={cat._id || cat.name} value={cat.name}>{cat.name}</option>
                 ))}
-              </Select>
-            </FormControl>
-
-            <TextField
-              fullWidth
-              label="Question ID (unique identifier)"
+              </select>
+            </div>
+            <input
+              className="ui-input"
+              placeholder="Question ID (unique identifier)"
               value={question.questionId}
               onChange={(e) => updateQuestion({ questionId: e.target.value })}
               required
-              placeholder="e.g., health_q1, travel_q2"
-              helperText="Enter a unique ID"
+              style={{ flex: 1 }}
             />
-          </Box>
+          </div>
 
-          {/* Row 3: Option Type and Children */}
-          <Box sx={{ display: 'flex', gap: 2 }}>
-            <FormControl fullWidth>
-              <InputLabel>Option Type</InputLabel>
-              <Select
-                value={question.option_type}
-                onChange={(e) => updateQuestion({ option_type: e.target.value })}
-                label="Option Type"
-              >
+          <div style={{ display: 'flex', gap: 8 }}>
+            <div style={{ flex: 1 }}>
+              <label className="ui-input-label" style={{ display: 'block', marginBottom: 4 }}>Option Type</label>
+              <select className="ui-input" value={question.option_type} onChange={(e) => updateQuestion({ option_type: e.target.value })}>
                 {fieldTypes.map((type) => (
-                  <MenuItem key={type.value} value={type.value}>
-                    {type.label}
-                  </MenuItem>
+                  <option key={type.value} value={type.value}>{type.label}</option>
                 ))}
-              </Select>
-            </FormControl>
-
-            <TextField
-              fullWidth
-              label="Children (Trigger for sub-questions)"
+              </select>
+            </div>
+            <input
+              className="ui-input"
+              placeholder="Children (Trigger for sub-questions)"
               value={question.children}
               onChange={(e) => updateQuestion({ children: e.target.value })}
-              placeholder="e.g., yes, no, salaried"
-              helperText="Comma-separated answers that can trigger sub-questions (e.g., 'yes,no')"
+              style={{ flex: 1 }}
             />
-          </Box>
+          </div>
+          <div style={{ fontSize: 12, color: 'var(--insta-muted)' }}>Comma-separated answers that can trigger sub-questions (e.g., 'yes,no')</div>
 
           {renderQuestionOptions()}
           {renderValidatorSection()}
           {renderSubQuestionsSection()}
 
-          <Box display="flex" justifyContent="flex-end" gap={2} marginTop={2}>
-            <Button
-              variant="outlined"
-              onClick={onCancel}
-              disabled={loading}
-            >
-              Cancel
-            </Button>
-            <Button
-              type="submit"
-              variant="contained"
-              disabled={loading}
-            >
-              {loading ? <CircularProgress size={24} /> : 'Add Question'}
-            </Button>
-          </Box>
-        </Box>
+          <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, marginTop: 8 }}>
+            <button className="insta-button" style={{ background: '#fff', color: 'var(--insta-primary)', border: '1px solid var(--insta-primary)' }} type="button" onClick={onCancel}>Cancel</button>
+            <button className="insta-button" type="submit" disabled={loading}>{loading ? 'Saving...' : 'Save Question'}</button>
+          </div>
+        </div>
       </form>
-    </Paper>
+    </div>
   );
-};
+}
 
 export default QuestionAdder;

@@ -1,27 +1,13 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import {
-  Box,
-  Paper,
-  Typography,
-  Button,
-  FormControl,
-  FormLabel,
-  FormHelperText,
-  Alert,
-  CircularProgress,
-  Chip,
-  Container,
-  
-  
-} from '@mui/material';
 import '../ui/insta/_form.scss';
+import BasicDetailsIcon from '../assets/icons/BasicDetailsIcon.svg';
 import { InputField, DateField, SelectField, CheckboxGroup, TextAreaField } from '../ui/insta/_form';
-import axios from 'axios';
+import { userAPI } from '../services/api';
 import { useDispatch, useSelector } from 'react-redux';
 import { setQuestions as setQuestionsAction, setAnswer, setAllAnswers, setCategory } from '../store/actions';
-import CheckCircleIcon from '@mui/icons-material/CheckCircle';
-import ArrowBackIosNewIcon from '@mui/icons-material/ArrowBackIosNew';
+ 
+ 
 
 // Inline field errors are shown per-question; no global snackbars/toasts
 
@@ -33,20 +19,20 @@ const UserForm = ({ category: categoryProp, appNumber: appNumberProp, mobile: mo
   const [questions, setQuestions] = useState([]);
   const [formData, setFormData] = useState({});
   const [loading, setLoading] = useState(true);
-  const [submitting, setSubmitting] = useState(false);
+  const [submitting] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState(false);
   const [fieldErrors, setFieldErrors] = useState({});
-  const [showFooter, setShowFooter] = useState(true);
   const questionRefs = useRef({});
   const formRef = useRef(null);
+  const dispatch = useDispatch();
   const fetchQuestions = React.useCallback(async () => {
     try {
       setLoading(true);
       setError('');
       console.log('Fetching questions for category:', category);
-      // Fetch questions for the category - validation is done on the backend
-      const response = await axios.get(`http://localhost:5000/api/user/questions/${category}`);
+      // Fetch questions for the category - via centralized services
+      const response = await userAPI.getQuestions(category);
       console.log('API Response:', response.data);
       console.log('Questions received:', response.data.questions.length);
       setQuestions(response.data.questions);
@@ -62,25 +48,13 @@ const UserForm = ({ category: categoryProp, appNumber: appNumberProp, mobile: mo
     } finally {
       setLoading(false);
     }
-  }, [category]);
+  }, [category, dispatch]);
 
   const reduxAnswers = useSelector(state => state.answers || {});
   const reduxUser = useSelector(state => state.user || null);
-  const dispatch = useDispatch();
 
   useEffect(() => {
     fetchQuestions();
-
-    const onResizeOrCheck = () => {
-      const doc = document.documentElement || document.body;
-      const formHeight = formRef.current ? formRef.current.scrollHeight : doc.scrollHeight;
-      setShowFooter(formHeight > window.innerHeight);
-    }
-    onResizeOrCheck();
-    window.addEventListener('resize', onResizeOrCheck);
-    return () => {
-      window.removeEventListener('resize', onResizeOrCheck);
-    }
   }, [fetchQuestions]);
 
   // Initialize form data from Redux answers when available
@@ -361,16 +335,7 @@ const UserForm = ({ category: categoryProp, appNumber: appNumberProp, mobile: mo
           }
         }
         
-        let helperText = '';
-        if (question.option_type === 'number') {
-          if (question.validators?.min?.value && question.validators?.max?.value) {
-            helperText = `Enter a value between ${question.validators.min.value} and ${question.validators.max.value}`;
-          } else if (question.validators?.min?.value) {
-            helperText = `Minimum value: ${question.validators.min.value}`;
-          } else if (question.validators?.max?.value) {
-            helperText = `Maximum value: ${question.validators.max.value}`;
-          }
-        }
+        
         
         return (
       <InputField
@@ -418,10 +383,16 @@ const UserForm = ({ category: categoryProp, appNumber: appNumberProp, mobile: mo
 
       case 'radio':
         return (
-      <FormControl component="fieldset" margin="normal" required={isRequired} error={!!fieldErrors[question.questionId]}>
-        <FormLabel component="legend">{labelText}</FormLabel>
-        {afterLabel}
-        <div className="insta-tabs" role="tablist" aria-label={typeof labelText === 'string' ? labelText : question.questionId}>
+          <div className="ui-input-wrapper">
+            {labelText && (
+              typeof labelText === 'string' ? (
+                <label className="ui-input-label">{labelText}{isRequired ? ' *' : ''}</label>
+              ) : (
+                <div className="ui-input-label">{labelText}</div>
+              )
+            )}
+            {afterLabel}
+            <div className="insta-tabs" role="tablist" aria-label={typeof labelText === 'string' ? labelText : question.questionId}>
               {question.options?.map((option, index) => (
                 <button
                   type="button"
@@ -435,9 +406,9 @@ const UserForm = ({ category: categoryProp, appNumber: appNumberProp, mobile: mo
               ))}
             </div>
             {fieldErrors[question.questionId] && (
-              <FormHelperText error>{fieldErrors[question.questionId]}</FormHelperText>
+              <div className="ui-input-error">{fieldErrors[question.questionId]}</div>
             )}
-          </FormControl>
+          </div>
         );
 
       case 'checkbox':
@@ -468,60 +439,58 @@ const UserForm = ({ category: categoryProp, appNumber: appNumberProp, mobile: mo
 
   if (loading) {
     return (
-      <Container maxWidth="md" sx={{ mt: 8, textAlign: 'center' }}>
-        <CircularProgress size={60} />
-        <Typography variant="h6" sx={{ mt: 2 }}>
-          Loading {category} Questions...
-        </Typography>
-      </Container>
+      <div className="insta-page" style={{ paddingTop: 24 }}>
+        <div style={{ maxWidth: 900, margin: '0 auto', padding: 16, textAlign: 'center' }}>
+          <div className="insta-card" style={{ padding: 24 }}>
+            <div style={{ fontWeight: 700, color: 'var(--insta-primary)' }}>Loading {category} Questions...</div>
+          </div>
+        </div>
+      </div>
     );
   }
 
   if (success) {
     return (
-      <Container maxWidth="md" sx={{ mt: 8 }}>
-        <Paper elevation={3} sx={{ p: 6, textAlign: 'center' }}>
-          <CheckCircleIcon sx={{ fontSize: 80, color: 'success.main', mb: 2 }} />
-          <Typography variant="h4" gutterBottom sx={{ fontWeight: 600 }}>
-            Thank You!
-          </Typography>
-          <Typography variant="h6" color="text.secondary" paragraph>
-            Your {category} form has been submitted successfully.
-          </Typography>
-          <Box sx={{ mt: 4, display: 'flex', gap: 2, justifyContent: 'center' }}>
-            <Button
-              variant="contained"
-              onClick={() => {
-                setSuccess(false);
-                setFormData({});
-                fetchQuestions();
-              }}
-            >
-              Submit Another Response
-            </Button>
-            <Button
-              variant="outlined"
-              onClick={() => navigate('/')}
-            >
-              Go to Home
-            </Button>
-          </Box>
-        </Paper>
-      </Container>
+      <div className="insta-page" style={{ paddingTop: 24 }}>
+        <div style={{ maxWidth: 900, margin: '0 auto', padding: 16 }}>
+          <div className="insta-card" style={{ padding: 32, textAlign: 'center' }}>
+            <div style={{ fontSize: 28, fontWeight: 800, marginBottom: 8, color: 'var(--insta-primary)' }}>Thank You!</div>
+            <div style={{ color: 'var(--insta-muted)', marginBottom: 16 }}>Your {category} form has been submitted successfully.</div>
+            <div style={{ display: 'flex', gap: 12, justifyContent: 'center' }}>
+              <button
+                className="insta-button"
+                onClick={() => {
+                  setSuccess(false);
+                  setFormData({});
+                  fetchQuestions();
+                }}
+              >
+                Submit Another Response
+              </button>
+              <button
+                className="insta-proceed"
+                onClick={() => navigate('/')}
+              >
+                Go to Home
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
     );
   }
 
   return (
-    <Container maxWidth="md" sx={{ py: 4 }} className="insta-page">
-      <Paper elevation={3} className="insta-card" sx={{ p: { xs: 3, md: 5 } }}>
+    <div className="insta-page no-mobile-footer-gap" style={{ paddingTop: 24 }}>
+      <div className="insta-card" style={{ maxWidth: 900, margin: '0 auto', padding: 24 }}>
         {/* Header (Instainsure style) */}
         <div className="insta-page-header">
           <div className="insta-header-icon">
-            {/* simple icon placeholder */}
-            <svg width="36" height="36" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><rect x="4" y="4" width="16" height="16" rx="2" stroke="#005e9e" strokeWidth="1.2" fill="#fff"/><path d="M7 9h10" stroke="#005e9e" strokeWidth="1.2" strokeLinecap="round"/><path d="M7 13h6" stroke="#005e9e" strokeWidth="1.2" strokeLinecap="round"/></svg>
+            <img src={BasicDetailsIcon} alt="Basic details" style={{ width: 60, height: 60 }} />
           </div>
           <div>
-            <div className="insta-header-title">My Declarations</div>
+            <div style={{ color: 'var(--insta-muted)', fontWeight: 600 }}>Step 3/3</div>
+            <div className="insta-header-title">Personal Declarations</div>
             <div className="insta-header-sub">Read the questions below and select your answers</div>
             {reduxUser && (
               <div style={{ marginTop: 8 }}>
@@ -536,51 +505,48 @@ const UserForm = ({ category: categoryProp, appNumber: appNumberProp, mobile: mo
         {/* Progress removed as per design request */}
 
         {error && (
-          <Alert severity="error" sx={{ mb: 3 }}>
+          <div style={{ marginBottom: 12, color: 'var(--insta-red)', background: '#ffeef0', padding: 12, borderRadius: 8 }}>
             {error}
-          </Alert>
+          </div>
         )}
 
         {questions.length === 0 ? (
-          <Alert severity="info">
+          <div style={{ background: '#f8fafc', border: '1px solid var(--insta-border)', padding: 12, borderRadius: 8 }}>
             No questions available for {category} category. Please check back later.
-          </Alert>
+          </div>
         ) : (
           <form ref={formRef} onSubmit={handleSubmit} noValidate>
-            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
               {sortQuestionsByNumber(questions).map((question, index) => (
                 <React.Fragment key={index}>
-                  <Box 
+                  <div 
                     ref={el => questionRefs.current[question.questionId] = el}
-                    sx={{ 
-                      p: 3, 
+                    style={{ 
+                      padding: 16, 
                       border: fieldErrors[question.questionId] ? '2px solid #d32f2f' : 'none', 
                       borderBottom: fieldErrors[question.questionId] ? undefined : '1px solid var(--insta-border)',
-                      borderRadius: 2,
+                      borderRadius: 8,
                       backgroundColor: fieldErrors[question.questionId] ? '#ffebee' : 'var(--insta-card-bg)',
                       boxShadow: fieldErrors[question.questionId] ? '0 1px 3px rgba(0,0,0,0.1)' : 'none',
                       transition: 'all 0.3s ease'
                     }}>
-                    <Box sx={{ 
-                      '& .MuiTextField-root': { mb: 0 },
-                      '& .MuiFormControl-root': { mb: 0 }
-                    }}>
+                    <div>
                       {renderQuestion(question)}
-                    </Box>
-                  </Box>
+                    </div>
+                  </div>
                   
                   {/* Render Sub-Questions */}
                   {shouldShowSubQuestions(question) && (
-                    <Box sx={{ 
-                      ml: { xs: 2, sm: 4 }, 
-                      p: 3, 
-                      border: `1px solid ${'var(--insta-border)'}`,
-                      borderRadius: 2,
+                    <div style={{ 
+                      marginLeft: 16,
+                      padding: 16, 
+                      border: `1px solid var(--insta-border)`,
+                      borderRadius: 8,
                       backgroundColor: 'var(--insta-card-bg)',
                       boxShadow: '0 1px 3px rgba(0,0,0,0.04)'
                     }}>
                       {/* Sub-questions header removed to match Instainsure styling */}
-                      <Box className="insta-child" sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+                      <div className="insta-child" style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
                         {question.subQuestions
                           .filter(subQ => {
                             // If triggerValue is set, only show if parent value matches
@@ -593,70 +559,54 @@ const UserForm = ({ category: categoryProp, appNumber: appNumberProp, mobile: mo
                           })
                           .sort((a, b) => (a.order || 0) - (b.order || 0))
                           .map((subQuestion, subIndex) => (
-                            <Box 
+                            <div 
                               key={subIndex}
                               ref={el => questionRefs.current[subQuestion.questionId] = el}
-                              sx={{ 
-                                p: 2.5, 
+                              style={{ 
+                                padding: 12, 
                                 border: fieldErrors[subQuestion.questionId] ? '2px solid #d32f2f' : '1px solid #90caf9', 
-                                borderRadius: 2,
+                                borderRadius: 8,
                                 backgroundColor: fieldErrors[subQuestion.questionId] ? '#ffebee' : 'white',
                                 boxShadow: '0 1px 2px rgba(0,0,0,0.05)',
-                                transition: 'all 0.3s ease'
+                                transition: 'all 0.3s ease',
+                                marginBottom: 8
                               }}
                             >
-                              <Box sx={{ 
-                                '& .MuiTextField-root': { mb: 0 },
-                                '& .MuiFormControl-root': { mb: 0 }
-                              }}>
+                              <div>
                                 {renderQuestion(subQuestion)}
-                              </Box>
-                            </Box>
+                              </div>
+                            </div>
                           ))}
-                      </Box>
-                    </Box>
+                      </div>
+                    </div>
                   )}
                 </React.Fragment>
               ))}
-            </Box>
+            </div>
 
-            <Box display="flex" justifyContent="center" marginTop={4}>
+            {/* Desktop inline submit */}
+            <div className="desktop-cta" style={{ justifyContent: 'center', marginTop: 16 }}>
               <button
                 type="submit"
                 className="insta-button"
                 disabled={submitting}
                 style={{ minWidth: 200, height: 48 }}
               >
-                {submitting ? <CircularProgress size={24} sx={{ color: '#fff' }} /> : 'Submit Form'}
+                {submitting ? 'Submitting...' : 'Submit Form'}
               </button>
-            </Box>
+            </div>
           </form>
         )}
-      </Paper>
+      </div>
 
       {/* Toast removed: errors are shown inline below each question */}
-
-      {/* {showFooter && (
+      {/* Insta footer bar (mobile only via CSS) */}
       <div className="insta-footer">
-        <div className="insta-back" onClick={() => navigate(-1)}>
-          <ArrowBackIosNewIcon sx={{ fontSize: 18 }} />
-          <span>BACK</span>
-        </div>
-        <div>
-          <button
-            className="insta-proceed"
-            onClick={() => {
-              if (formRef.current && formRef.current.requestSubmit) formRef.current.requestSubmit();
-              else handleSubmit({ preventDefault: () => {} });
-            }}
-            disabled={submitting}
-          >
-            PROCEED
-          </button>
-        </div>
+        <button className="insta-proceed mobile-cta proceed-btn" onClick={(e) => handleSubmit(e)} disabled={submitting}>
+          {submitting ? 'SUBMITTING...' : 'PROCEED'}
+        </button>
       </div>
-      )} */}
-    </Container>
+    </div>
   );
 };
 

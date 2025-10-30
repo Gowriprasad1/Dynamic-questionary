@@ -1,25 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
-import {
-  Box,
-  Paper,
-  Typography,
-  TextField,
-  Button,
-  FormControl,
-  FormLabel,
-  FormHelperText,
-  RadioGroup,
-  FormControlLabel,
-  Radio,
-  Checkbox,
-  FormGroup,
-  Select,
-  MenuItem,
-  InputLabel,
-  Alert,
-  CircularProgress,
-  Chip,
-} from '@mui/material';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 // Date picker imports removed - using simple HTML date input instead
 import { formsAPI, submissionsAPI } from '../services/api';
 import '../ui/insta/_form.scss';
@@ -34,13 +13,7 @@ const DynamicForm = ({ formId, onSuccess }) => {
   const [success, setSuccess] = useState('');
   const questionRefs = useRef({});
 
-  useEffect(() => {
-    if (formId) {
-      fetchForm();
-    }
-  }, [formId]);
-
-  const fetchForm = async () => {
+  const fetchForm = useCallback(async () => {
     try {
       setLoading(true);
       const response = await formsAPI.getById(formId);
@@ -57,7 +30,13 @@ const DynamicForm = ({ formId, onSuccess }) => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [formId]);
+
+  useEffect(() => {
+    if (formId) {
+      fetchForm();
+    }
+  }, [formId, fetchForm]);
 
   const handleInputChange = (fieldName, value) => {
     setFormData(prev => ({
@@ -359,20 +338,6 @@ const DynamicForm = ({ formId, onSuccess }) => {
           }
         }
         
-        // Build helper text
-        let helperText = '';
-        if (question.option_type === 'number') {
-          if (question.validators?.min?.value && question.validators?.max?.value) {
-            helperText = `Enter a value between ${question.validators.min.value} and ${question.validators.max.value}`;
-          } else if (question.validators?.min?.value) {
-            helperText = `Minimum value: ${question.validators.min.value}`;
-          } else if (question.validators?.max?.value) {
-            helperText = `Maximum value: ${question.validators.max.value}`;
-          }
-        } else if (question.validators?.maxLength?.value) {
-          helperText = `Maximum ${question.validators.maxLength.value} characters`;
-        }
-        
         return (
           <InputField
             fullWidth
@@ -418,8 +383,12 @@ const DynamicForm = ({ formId, onSuccess }) => {
 
       case 'radio':
         return (
-          <FormControl component="fieldset" margin="normal" required={isRequired} error={!!fieldErrors[question.questionId]}>
-            <FormLabel component="legend">{labelText}</FormLabel>
+          <div className="ui-input-wrapper">
+            {typeof labelText === 'string' ? (
+              <label className="ui-input-label">{labelText}{isRequired ? ' *' : ''}</label>
+            ) : (
+              <div className="ui-input-label">{labelText}</div>
+            )}
             {afterLabel}
             <div className="insta-tabs" role="tablist" aria-label={typeof labelText === 'string' ? labelText : question.questionId}>
               {question.options?.map((option, index) => (
@@ -434,9 +403,9 @@ const DynamicForm = ({ formId, onSuccess }) => {
               ))}
             </div>
             {fieldErrors[question.questionId] && (
-              <FormHelperText error>{fieldErrors[question.questionId]}</FormHelperText>
+              <div className="ui-input-error">{fieldErrors[question.questionId]}</div>
             )}
-          </FormControl>
+          </div>
         );
 
       case 'checkbox':
@@ -481,166 +450,115 @@ const DynamicForm = ({ formId, onSuccess }) => {
 
   if (loading) {
     return (
-      <Box display="flex" justifyContent="center" alignItems="center" minHeight="200px">
-        <CircularProgress />
-      </Box>
+      <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: 200 }}>
+        <div className="insta-card" style={{ padding: 16 }}>Loading form...</div>
+      </div>
     );
   }
 
   if (!form) {
     return (
-      <Alert severity="error">
+      <div style={{ margin: 12, color: 'var(--insta-red)', background: '#ffeef0', padding: 12, borderRadius: 8 }}>
         Form not found
-      </Alert>
+      </div>
     );
   }
 
   return (
-    <Box maxWidth="900px" margin="0 auto" padding={3}>
-      <Paper elevation={3} sx={{ padding: 4 }}>
-        <Typography variant="h4" component="h1" gutterBottom align="center" sx={{ mb: 2, fontWeight: 600 }}>
-          {form.title}
-        </Typography>
-        
+    <div className="insta-page" style={{ paddingTop: 12 }}>
+      <div className="insta-card" style={{ maxWidth: 900, margin: '0 auto', padding: 24 }}>
+        <div style={{ textAlign: 'center', fontWeight: 800, fontSize: 22, marginBottom: 8 }}>{form.title}</div>
         {form.description && (
-          <Typography variant="body1" color="text.secondary" paragraph align="center" sx={{ mb: 4 }}>
-            {form.description}
-          </Typography>
+          <div style={{ color: 'var(--insta-muted)', textAlign: 'center', marginBottom: 16 }}>{form.description}</div>
         )}
 
         {success && (
-          <Alert severity="success" sx={{ marginBottom: 3 }}>
+          <div style={{ marginBottom: 12, color: 'green', background: '#eaf9ea', padding: 12, borderRadius: 8 }}>
             {success}
-          </Alert>
+          </div>
         )}
 
-        {/* Removed global/stacked error to avoid overlapping; errors render inline per field */}
-
         <form onSubmit={handleSubmit} noValidate>
-          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
             {sortQuestionsByNumber(form.questions)
               .map((question, index) => (
                 <React.Fragment key={index}>
-                  <Box 
+                  <div 
                     ref={el => questionRefs.current[question.questionId] = el}
-                    sx={{ 
-                      p: 3, 
-                      border: fieldErrors[question.questionId] ? '2px solid #d32f2f' : '1px solid #e0e0e0',
-                      borderRadius: 2,
-                      backgroundColor: fieldErrors[question.questionId] ? '#ffebee' : '#fafafa',
-                      boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
+                    style={{ 
+                      padding: 16, 
+                      border: fieldErrors[question.questionId] ? '2px solid #d32f2f' : '1px solid var(--insta-border)',
+                      borderRadius: 8,
+                      backgroundColor: fieldErrors[question.questionId] ? '#ffebee' : 'var(--insta-card-bg)',
+                      boxShadow: '0 1px 3px rgba(0,0,0,0.06)',
                       transition: 'all 0.3s ease'
-                    }}>
-                    <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
-                      <Chip 
-                        label={question.questionType} 
-                        color="primary" 
-                        size="small" 
-                        sx={{ fontWeight: 500 }}
-                      />
-                    </Box>
-                    <Box sx={{ 
-                      '& .MuiTextField-root': { 
-                        mb: 0 
-                      },
-                      '& .MuiFormControl-root': {
-                        mb: 0
-                      }
-                    }}>
+                    }}
+                  >
+                    <div style={{ color: 'var(--insta-primary)', fontSize: 12, fontWeight: 600, marginBottom: 8 }}>{question.questionType}</div>
+                    <div>
                       {renderQuestion(question)}
-                    </Box>
-                  </Box>
+                    </div>
+                  </div>
                   
-                  {/* Render Sub-Questions if condition is met */}
                   {shouldShowSubQuestions(question) && (
-                    <Box sx={{ 
-                      ml: { xs: 2, sm: 4 }, 
-                      p: 3, 
-                      border: '2px solid #1976d2', 
-                      borderRadius: 2,
-                      backgroundColor: '#e3f2fd',
-                      boxShadow: '0 2px 4px rgba(25,118,210,0.2)'
+                    <div style={{ 
+                      marginLeft: 16, 
+                      padding: 16, 
+                      border: '1px solid var(--insta-primary)', 
+                      borderRadius: 8,
+                      backgroundColor: '#eaf4ff',
+                      boxShadow: '0 1px 3px rgba(0,0,0,0.04)'
                     }}>
-                      <Typography variant="h6" color="primary" gutterBottom fontWeight="600" sx={{ mb: 3 }}>
-                        📋 Additional Questions
-                      </Typography>
-                      <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+                      <div style={{ fontWeight: 700, color: 'var(--insta-primary)', marginBottom: 8 }}>Additional Questions</div>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
                         {question.subQuestions
                           .filter(subQ => {
-                            // If triggerValue is set, only show if parent value matches
                             if (subQ.triggerValue) {
                               const parentValue = formData[question.questionId];
                               return parentValue && parentValue.toString().toLowerCase() === subQ.triggerValue.toLowerCase();
                             }
-                            // If no triggerValue, show for any parent value that triggers sub-questions
                             return true;
                           })
                           .sort((a, b) => (a.order || 0) - (b.order || 0))
                           .map((subQuestion, subIndex) => (
-                            <Box 
+                            <div 
                               key={subIndex}
                               ref={el => questionRefs.current[subQuestion.questionId] = el}
-                              sx={{ 
-                                p: 2.5, 
+                              style={{ 
+                                padding: 12, 
                                 border: fieldErrors[subQuestion.questionId] ? '2px solid #d32f2f' : '1px solid #90caf9', 
-                                borderRadius: 2,
-                                backgroundColor: fieldErrors[subQuestion.questionId] ? '#ffebee' : 'white',
+                                borderRadius: 8,
+                                backgroundColor: fieldErrors[subQuestion.questionId] ? '#ffebee' : '#fff',
                                 boxShadow: '0 1px 2px rgba(0,0,0,0.05)',
                                 transition: 'all 0.3s ease'
                               }}
                             >
-                              <Box sx={{ display: 'flex', alignItems: 'center', mb: 1.5 }}>
-                                <Chip 
-                                  label={subQuestion.questionType} 
-                                  color="primary" 
-                                  size="small"
-                                  variant="outlined"
-                                  sx={{ fontWeight: 500 }}
-                                />
-                              </Box>
-                              <Box sx={{ 
-                                '& .MuiTextField-root': { 
-                                  mb: 0 
-                                },
-                                '& .MuiFormControl-root': {
-                                  mb: 0
-                                }
-                              }}>
+                              <div style={{ color: 'var(--insta-primary)', fontSize: 12, fontWeight: 600, marginBottom: 6 }}>{subQuestion.questionType}</div>
+                              <div>
                                 {renderQuestion(subQuestion)}
-                              </Box>
-                            </Box>
+                              </div>
+                            </div>
                           ))}
-                      </Box>
-                    </Box>
+                      </div>
+                    </div>
                   )}
                 </React.Fragment>
               ))}
-          </Box>
+          </div>
 
-          <Box display="flex" justifyContent="center" marginTop={4}>
-            <Button
+          <div style={{ display: 'flex', justifyContent: 'center', marginTop: 16 }}>
+            <button
               type="submit"
-              variant="contained"
-              size="large"
+              className="insta-button"
               disabled={submitting}
-              sx={{ 
-                minWidth: 200,
-                height: 48,
-                fontSize: '1rem',
-                fontWeight: 600,
-                borderRadius: 2,
-                boxShadow: 2,
-                '&:hover': {
-                  boxShadow: 4
-                }
-              }}
+              style={{ minWidth: 200, height: 48 }}
             >
-              {submitting ? <CircularProgress size={24} /> : 'Submit Form'}
-            </Button>
-          </Box>
+              {submitting ? 'Submitting...' : 'Submit Form'}
+            </button>
+          </div>
         </form>
-      </Paper>
-    </Box>
+      </div>
+    </div>
   );
 };
 

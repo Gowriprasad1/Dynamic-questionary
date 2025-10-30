@@ -1,34 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import {
-  Container,
-  Paper,
-  Typography,
-  Box,
-  Button,
-  TextField,
-  Table,
-  TableBody,
-  TableCell,
-  TableContainer,
-  TableHead,
-  TableRow,
-  IconButton,
-  Dialog,
-  DialogTitle,
-  DialogContent,
-  DialogActions,
-  Alert,
-  Chip,
-  InputAdornment
-} from '@mui/material';
-import {
-  Add as AddIcon,
-  Delete as DeleteIcon,
-  Person as PersonIcon,
-  Visibility,
-  VisibilityOff
-} from '@mui/icons-material';
 import axios from 'axios';
+import '../ui/insta/_form.scss';
 
 const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000/api';
 
@@ -114,139 +86,122 @@ function UserManagement() {
   };
 
   return (
-    <Container maxWidth="lg" sx={{ py: 4 }}>
-      <Paper elevation={3} sx={{ p: 4 }}>
-        <Box display="flex" justifyContent="space-between" alignItems="center" mb={3}>
-          <Box>
-            <Typography variant="h4" gutterBottom>
-              User Management
-            </Typography>
-            <Typography variant="body2" color="text.secondary">
-              Manage admin users who can access the form builder
-            </Typography>
-          </Box>
-          <Button
-            variant="contained"
-            startIcon={<AddIcon />}
-            onClick={() => setOpenDialog(true)}
-          >
-            Add New User
-          </Button>
-        </Box>
+    <div className="insta-page" style={{ paddingTop: 16 }}>
+      <div className="insta-card" style={{ maxWidth: 1100, margin: '0 auto', padding: 16 }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
+          <div>
+            <div style={{ fontWeight: 800, fontSize: 22 }}>User Management</div>
+            <div style={{ color: 'var(--insta-muted)' }}>Manage admin users who can access the form builder</div>
+          </div>
+          <button className="insta-button" onClick={() => setOpenDialog(true)}>Add New User</button>
+        </div>
 
         {error && (
-          <Alert severity="error" sx={{ mb: 2 }} onClose={() => setError('')}>
+          <div style={{ marginBottom: 12, color: 'var(--insta-red)', background: '#ffeef0', padding: 12, borderRadius: 8 }} onClick={() => setError('')}>
             {error}
-          </Alert>
+          </div>
         )}
 
         {success && (
-          <Alert severity="success" sx={{ mb: 2 }} onClose={() => setSuccess('')}>
+          <div style={{ marginBottom: 12, color: 'green', background: '#eaf9ea', padding: 12, borderRadius: 8 }} onClick={() => setSuccess('')}>
             {success}
-          </Alert>
+          </div>
         )}
 
-        <TableContainer>
-          <Table>
-            <TableHead>
-              <TableRow>
-                <TableCell><strong>User ID</strong></TableCell>
-                <TableCell><strong>Created By</strong></TableCell>
-                <TableCell><strong>Created At</strong></TableCell>
-                <TableCell align="right"><strong>Actions</strong></TableCell>
-              </TableRow>
-            </TableHead>
-            <TableBody>
+        <div style={{ overflowX: 'auto' }}>
+          <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+            <thead>
+              <tr style={{ background: '#f7f7f8' }}>
+                <th style={{ textAlign: 'left', padding: '10px', borderBottom: '1px solid var(--insta-border)' }}>User ID</th>
+                <th style={{ textAlign: 'left', padding: '10px', borderBottom: '1px solid var(--insta-border)' }}>Created By</th>
+                <th style={{ textAlign: 'left', padding: '10px', borderBottom: '1px solid var(--insta-border)' }}>Created At</th>
+                <th style={{ textAlign: 'right', padding: '10px', borderBottom: '1px solid var(--insta-border)' }}>Actions</th>
+              </tr>
+            </thead>
+            <tbody>
               {users.map((user) => (
-                <TableRow key={user._id}>
-                  <TableCell>
-                    <Box display="flex" alignItems="center" gap={1}>
-                      <PersonIcon fontSize="small" color="primary" />
+                <tr key={user._id}>
+                  <td style={{ padding: '10px', borderBottom: '1px solid var(--insta-border)' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                      <span style={{ display: 'inline-block', width: 8, height: 8, borderRadius: 50, background: 'var(--insta-primary)' }} />
                       {user.userId}
                       {user.userId === currentUser.userId && (
-                        <Chip label="You" size="small" color="primary" />
+                        <span style={{ marginLeft: 6, border: '1px solid var(--insta-primary)', color: 'var(--insta-primary)', padding: '2px 6px', borderRadius: 10, fontSize: 12 }}>You</span>
                       )}
-                    </Box>
-                  </TableCell>
-                  <TableCell>{user.createdBy}</TableCell>
-                  <TableCell>{formatDate(user.createdAt)}</TableCell>
-                  <TableCell align="right">
-                    <IconButton
-                      color="error"
+                    </div>
+                  </td>
+                  <td style={{ padding: '10px', borderBottom: '1px solid var(--insta-border)' }}>{user.createdBy}</td>
+                  <td style={{ padding: '10px', borderBottom: '1px solid var(--insta-border)' }}>{formatDate(user.createdAt)}</td>
+                  <td style={{ padding: '10px', borderBottom: '1px solid var(--insta-border)', textAlign: 'right' }}>
+                    <button
+                      className="insta-button"
+                      style={{ background: '#fff', color: 'var(--insta-red)', border: '1px solid var(--insta-red)' }}
                       onClick={() => handleDeleteUser(user.userId)}
                       disabled={user.userId === currentUser.userId}
-                      title={
-                        user.userId === currentUser.userId
-                          ? "You cannot delete your own account"
-                          : "Delete user"
-                      }
+                      title={user.userId === currentUser.userId ? 'You cannot delete your own account' : 'Delete user'}
                     >
-                      <DeleteIcon />
-                    </IconButton>
-                  </TableCell>
-                </TableRow>
+                      Delete
+                    </button>
+                  </td>
+                </tr>
               ))}
-            </TableBody>
-          </Table>
-        </TableContainer>
+            </tbody>
+          </table>
+        </div>
 
         {users.length === 0 && (
-          <Box textAlign="center" py={4}>
-            <Typography color="text.secondary">No users found</Typography>
-          </Box>
+          <div style={{ textAlign: 'center', padding: 16, color: 'var(--insta-muted)' }}>No users found</div>
         )}
-      </Paper>
+      </div>
 
-      {/* Add User Dialog */}
-      <Dialog open={openDialog} onClose={() => setOpenDialog(false)} maxWidth="sm" fullWidth>
-        <DialogTitle>Add New User</DialogTitle>
-        <DialogContent>
-          <Box sx={{ pt: 2 }}>
-            <TextField
-              fullWidth
-              label="User ID"
-              value={newUserId}
-              onChange={(e) => setNewUserId(e.target.value)}
-              margin="normal"
-              required
-              helperText="Enter a unique user ID (lowercase)"
-            />
-            <TextField
-              fullWidth
-              label="Password"
-              type={showPassword ? 'text' : 'password'}
-              value={newPassword}
-              onChange={(e) => setNewPassword(e.target.value)}
-              margin="normal"
-              required
-              helperText="Enter a secure password"
-              InputProps={{
-                endAdornment: (
-                  <InputAdornment position="end">
-                    <IconButton
-                      onClick={() => setShowPassword(!showPassword)}
-                      edge="end"
-                    >
-                      {showPassword ? <VisibilityOff /> : <Visibility />}
-                    </IconButton>
-                  </InputAdornment>
-                )
-              }}
-            />
-          </Box>
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setOpenDialog(false)}>Cancel</Button>
-          <Button
-            onClick={handleAddUser}
-            variant="contained"
-            disabled={!newUserId || !newPassword || loading}
-          >
-            {loading ? 'Creating...' : 'Create User'}
-          </Button>
-        </DialogActions>
-      </Dialog>
-    </Container>
+      {openDialog && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.4)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 }}>
+          <div className="insta-card" style={{ width: '90%', maxWidth: 480, padding: 16 }}>
+            <div style={{ fontWeight: 700, marginBottom: 8 }}>Add New User</div>
+            <div style={{ marginTop: 8 }}>
+              <div className="ui-input-wrapper">
+                <label className="ui-input-label">User ID *</label>
+                <input
+                  className="ui-input"
+                  type="text"
+                  value={newUserId}
+                  onChange={(e) => setNewUserId(e.target.value)}
+                  placeholder="Enter a unique user ID (lowercase)"
+                  required
+                />
+              </div>
+              <div className="ui-input-wrapper">
+                <label className="ui-input-label">Password *</label>
+                <div style={{ position: 'relative' }}>
+                  <input
+                    className="ui-input"
+                    type={showPassword ? 'text' : 'password'}
+                    value={newPassword}
+                    onChange={(e) => setNewPassword(e.target.value)}
+                    placeholder="Enter a secure password"
+                    required
+                    style={{ paddingRight: 80 }}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    style={{ position: 'absolute', right: 8, top: 8, background: 'transparent', border: '1px solid var(--insta-border)', borderRadius: 14, padding: '4px 8px', cursor: 'pointer', color: 'var(--insta-muted)' }}
+                  >
+                    {showPassword ? 'Hide' : 'Show'}
+                  </button>
+                </div>
+              </div>
+            </div>
+            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, marginTop: 12 }}>
+              <button className="insta-button" style={{ background: '#fff', color: 'var(--insta-primary)', border: '1px solid var(--insta-primary)' }} onClick={() => setOpenDialog(false)}>Cancel</button>
+              <button className="insta-button" onClick={handleAddUser} disabled={!newUserId || !newPassword || loading}>
+                {loading ? 'Creating...' : 'Create User'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
   );
 }
 

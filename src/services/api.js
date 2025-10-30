@@ -39,4 +39,12 @@ export const categoriesAPI = {
   initializeDefaults: () => api.post('/categories/initialize-defaults'),
 };
 
+// User flow API (lookup, otp)
+export const userAPI = {
+  lookup: (payload) => api.post('/user/lookup', payload),
+  sendOtp: (payload) => api.post('/user/send-otp', payload),
+  verifyOtp: (payload) => api.post('/user/verify-otp', payload),
+  getQuestions: (category) => api.get(`/user/questions/${encodeURIComponent(category)}`),
+};
+
 export default api;

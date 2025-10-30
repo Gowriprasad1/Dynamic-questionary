@@ -1,6 +1,4 @@
 import React from 'react';
-import { ThemeProvider, createTheme } from '@mui/material/styles';
-import CssBaseline from '@mui/material/CssBaseline';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import LoginPage from './pages/LoginPage';
 import AdminDashboard from './pages/AdminDashboard';
@@ -12,34 +10,9 @@ import { Provider } from 'react-redux';
 import store from './store';
 import ProtectedRoute from './components/ProtectedRoute';
 
-const theme = createTheme({
-  palette: {
-    primary: {
-      main: '#1976d2',
-    },
-    secondary: {
-      main: '#dc004e',
-    },
-  },
-  typography: {
-    fontFamily: '"Roboto", "Helvetica", "Arial", sans-serif',
-  },
-  components: {
-    MuiButton: {
-      styleOverrides: {
-        root: {
-          textTransform: 'none',
-        },
-      },
-    },
-  },
-});
-
 function App() {
   return (
-    <ThemeProvider theme={theme}>
-      <CssBaseline />
-      <Provider store={store}>
+    <Provider store={store}>
       <Router>
         <Routes>
           {/* Redirect root to login */}
@@ -65,8 +38,7 @@ function App() {
           <Route path="/submitted" element={<SubmittedSuccess />} />
         </Routes>
       </Router>
-      </Provider>
-    </ThemeProvider>
+    </Provider>
   );
 }
 

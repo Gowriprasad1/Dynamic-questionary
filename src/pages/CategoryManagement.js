@@ -1,29 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import {
-  Box,
-  Container,
-  Typography,
-  Button,
-  Card,
-  CardContent,
-  CardActions,
-  Grid,
-  Dialog,
-  DialogTitle,
-  DialogContent,
-  DialogActions,
-  TextField,
-  IconButton,
-  Alert,
-  CircularProgress,
-  Chip,
-} from '@mui/material';
-import {
-  Add as AddIcon,
-  Edit as EditIcon,
-  Delete as DeleteIcon,
-  Category as CategoryIcon,
-} from '@mui/icons-material';
+import '../ui/insta/_form.scss';
 import { categoriesAPI } from '../services/api';
 
 const CategoryManagement = () => {
@@ -155,170 +131,100 @@ const CategoryManagement = () => {
 
   if (loading) {
     return (
-      <Box display="flex" justifyContent="center" alignItems="center" minHeight="400px">
-        <CircularProgress />
-      </Box>
+      <div className="insta-page" style={{ paddingTop: 12 }}>
+        <div style={{ maxWidth: 1000, margin: '0 auto', padding: 16, textAlign: 'center' }}>
+          <div className="insta-card" style={{ padding: 24 }}>Loading categories...</div>
+        </div>
+      </div>
     );
   }
 
   return (
-    <Container maxWidth="lg" sx={{ marginTop: 3, marginBottom: 3 }}>
-      <Box display="flex" justifyContent="space-between" alignItems="center" marginBottom={3}>
-        <Typography variant="h4" component="h1">
-          Category Management
-        </Typography>
-        <Box display="flex" gap={2}>
-          {categories.length === 0 && (
-            <Button
-              variant="outlined"
-              onClick={handleInitializeDefaults}
-            >
-              Initialize Default Categories
-            </Button>
-          )}
-          <Button
-            variant="contained"
-            startIcon={<AddIcon />}
-            onClick={() => handleOpenDialog()}
-          >
-            Add Category
-          </Button>
-        </Box>
-      </Box>
+    <div className="insta-page" style={{ paddingTop: 12 }}>
+      <div className="insta-card" style={{ maxWidth: 1000, margin: '0 auto', padding: 16 }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
+          <div style={{ fontWeight: 800, fontSize: 22 }}>Category Management</div>
+          <div style={{ display: 'flex', gap: 8 }}>
+            {categories.length === 0 && (
+              <button className="insta-button" style={{ background: '#fff', color: 'var(--insta-primary)', border: '1px solid var(--insta-primary)' }} onClick={handleInitializeDefaults}>Initialize Default Categories</button>
+            )}
+            <button className="insta-button" onClick={() => handleOpenDialog()}>Add Category</button>
+          </div>
+        </div>
 
-      {error && (
-        <Alert severity="error" sx={{ marginBottom: 3 }} onClose={() => setError('')}>
-          {error}
-        </Alert>
-      )}
+        {error && (
+          <div style={{ marginBottom: 12, color: 'var(--insta-red)', background: '#ffeef0', padding: 12, borderRadius: 8 }}>{error}</div>
+        )}
+        {success && (
+          <div style={{ marginBottom: 12, color: 'green', background: '#eaf9ea', padding: 12, borderRadius: 8 }}>{success}</div>
+        )}
 
-      {success && (
-        <Alert severity="success" sx={{ marginBottom: 3 }} onClose={() => setSuccess('')}>
-          {success}
-        </Alert>
-      )}
-
-      {categories.length === 0 ? (
-        <Box textAlign="center" padding={4}>
-          <CategoryIcon sx={{ fontSize: 64, color: 'text.secondary', mb: 2 }} />
-          <Typography variant="h6" color="text.secondary" gutterBottom>
-            No categories found
-          </Typography>
-          <Typography variant="body2" color="text.secondary" paragraph>
-            Create your first category or initialize default categories
-          </Typography>
-        </Box>
-      ) : (
-        <Grid container spacing={3}>
-          {categories.map((category) => (
-            <Grid item xs={12} sm={6} md={4} key={category._id}>
-              <Card>
-                <CardContent>
-                  <Box display="flex" alignItems="center" justifyContent="space-between" mb={1}>
-                    <Typography variant="h6" component="h2">
-                      {category.name}
-                    </Typography>
-                    <Chip
-                      label={category.isActive ? 'Active' : 'Inactive'}
-                      color={category.isActive ? 'success' : 'default'}
-                      size="small"
-                    />
-                  </Box>
-                  {category.description && (
-                    <Typography variant="body2" color="text.secondary" paragraph>
-                      {category.description}
-                    </Typography>
-                  )}
-                  <Typography variant="caption" color="text.secondary">
-                    Order: {category.order}
-                  </Typography>
-                </CardContent>
-                <CardActions>
-                  <Button
-                    size="small"
-                    startIcon={<EditIcon />}
-                    onClick={() => handleOpenDialog(category)}
-                  >
-                    Edit
-                  </Button>
-                  <Button
-                    size="small"
-                    onClick={() => handleToggleActive(category)}
-                    color={category.isActive ? 'warning' : 'success'}
-                  >
+        {categories.length === 0 ? (
+          <div style={{ textAlign: 'center', padding: 24 }}>
+            <div style={{ fontSize: 18, color: 'var(--insta-muted)', marginBottom: 6 }}>No categories found</div>
+            <div style={{ color: 'var(--insta-muted)' }}>Create your first category or initialize default categories</div>
+          </div>
+        ) : (
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', gap: 16 }}>
+            {categories.map((category) => (
+              <div key={category._id} className="insta-card" style={{ padding: 12 }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
+                  <div style={{ fontWeight: 700 }}>{category.name}</div>
+                  <span style={{ border: '1px solid var(--insta-border)', borderRadius: 10, padding: '2px 8px', fontSize: 12, color: category.isActive ? 'green' : '#555' }}>
+                    {category.isActive ? 'Active' : 'Inactive'}
+                  </span>
+                </div>
+                {category.description && (
+                  <div style={{ color: 'var(--insta-muted)', marginBottom: 6 }}>{category.description}</div>
+                )}
+                <div style={{ fontSize: 12, color: 'var(--insta-muted)' }}>Order: {category.order}</div>
+                <div style={{ display: 'flex', gap: 8, marginTop: 10 }}>
+                  <button className="insta-button" style={{ background: '#fff', color: 'var(--insta-primary)', border: '1px solid var(--insta-primary)' }} onClick={() => handleOpenDialog(category)}>Edit</button>
+                  <button className="insta-button" style={{ background: '#fff', color: category.isActive ? '#a15c00' : 'green', border: `1px solid ${category.isActive ? '#a15c00' : 'green'}` }} onClick={() => handleToggleActive(category)}>
                     {category.isActive ? 'Deactivate' : 'Activate'}
-                  </Button>
-                  <IconButton
-                    size="small"
-                    onClick={() => handleDeleteClick(category)}
-                    color="error"
-                  >
-                    <DeleteIcon />
-                  </IconButton>
-                </CardActions>
-              </Card>
-            </Grid>
-          ))}
-        </Grid>
+                  </button>
+                  <button className="insta-button" style={{ background: '#fff', color: 'var(--insta-red)', border: '1px solid var(--insta-red)' }} onClick={() => handleDeleteClick(category)}>Delete</button>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+
+      {/* Add/Edit modal */}
+      {dialogOpen && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.4)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 }}>
+          <div className="insta-card" style={{ width: '90%', maxWidth: 520, padding: 16 }}>
+            <div style={{ fontWeight: 700, marginBottom: 8 }}>{editingCategory ? 'Edit Category' : 'Add New Category'}</div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+              <input className="ui-input" placeholder="Category Name" value={formData.name} onChange={(e) => setFormData({ ...formData, name: e.target.value })} />
+              <textarea className="ui-input" rows={3} placeholder="Description" value={formData.description} onChange={(e) => setFormData({ ...formData, description: e.target.value })} />
+              <input className="ui-input" type="number" placeholder="Order" value={formData.order} onChange={(e) => setFormData({ ...formData, order: parseInt(e.target.value) || 0 })} />
+            </div>
+            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, marginTop: 12 }}>
+              <button className="insta-button" style={{ background: '#fff', color: 'var(--insta-primary)', border: '1px solid var(--insta-primary)' }} onClick={handleCloseDialog}>Cancel</button>
+              <button className="insta-button" onClick={handleSubmit}>{editingCategory ? 'Update' : 'Create'}</button>
+            </div>
+          </div>
+        </div>
       )}
 
-      {/* Add/Edit Dialog */}
-      <Dialog open={dialogOpen} onClose={handleCloseDialog} maxWidth="sm" fullWidth>
-        <DialogTitle>
-          {editingCategory ? 'Edit Category' : 'Add New Category'}
-        </DialogTitle>
-        <DialogContent>
-          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, mt: 2 }}>
-            <TextField
-              label="Category Name"
-              value={formData.name}
-              onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-              required
-              fullWidth
-            />
-            <TextField
-              label="Description"
-              value={formData.description}
-              onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-              multiline
-              rows={3}
-              fullWidth
-            />
-            <TextField
-              label="Order"
-              type="number"
-              value={formData.order}
-              onChange={(e) => setFormData({ ...formData, order: parseInt(e.target.value) || 0 })}
-              fullWidth
-              helperText="Lower numbers appear first"
-            />
-          </Box>
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={handleCloseDialog}>Cancel</Button>
-          <Button onClick={handleSubmit} variant="contained">
-            {editingCategory ? 'Update' : 'Create'}
-          </Button>
-        </DialogActions>
-      </Dialog>
-
-      {/* Delete Confirmation Dialog */}
-      <Dialog open={deleteDialogOpen} onClose={() => setDeleteDialogOpen(false)}>
-        <DialogTitle>Delete Category</DialogTitle>
-        <DialogContent>
-          <Typography>
-            Are you sure you want to delete the category "{categoryToDelete?.name}"? 
-            This action cannot be undone.
-          </Typography>
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setDeleteDialogOpen(false)}>Cancel</Button>
-          <Button onClick={handleDeleteConfirm} color="error" variant="contained">
-            Delete
-          </Button>
-        </DialogActions>
-      </Dialog>
-    </Container>
+      {/* Delete Confirmation modal */}
+      {deleteDialogOpen && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.4)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 }}>
+          <div className="insta-card" style={{ width: '90%', maxWidth: 480, padding: 16 }}>
+            <div style={{ fontWeight: 700, marginBottom: 8 }}>Delete Category</div>
+            <div style={{ color: 'var(--insta-muted)', marginBottom: 12 }}>
+              Are you sure you want to delete the category "{categoryToDelete?.name}"? This action cannot be undone.
+            </div>
+            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8 }}>
+              <button className="insta-button" style={{ background: '#fff', color: 'var(--insta-primary)', border: '1px solid var(--insta-primary)' }} onClick={() => setDeleteDialogOpen(false)}>Cancel</button>
+              <button className="insta-button" style={{ background: 'var(--insta-red)' }} onClick={handleDeleteConfirm}>Delete</button>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
   );
 };
 

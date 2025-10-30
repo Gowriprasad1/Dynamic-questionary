@@ -1,24 +1,6 @@
 import React, { useState } from 'react';
-import {
-  AppBar,
-  Toolbar,
-  Typography,
-  Button,
-  Box,
-  Container,
-  IconButton,
-  Menu,
-  MenuItem,
-  Chip
-} from '@mui/material';
-import {
-  Logout as LogoutIcon,
-  AccountCircle,
-  ManageAccounts as ManageAccountsIcon,
-  Dashboard as DashboardIcon,
-  Category as CategoryIcon
-} from '@mui/icons-material';
 import { useNavigate, Routes, Route, useLocation } from 'react-router-dom';
+import '../ui/insta/_form.scss';
 import HomePage from './HomePage';
 import UserManagement from './UserManagement';
 import CategoryManagement from './CategoryManagement';
@@ -26,7 +8,7 @@ import CategoryManagement from './CategoryManagement';
 function AdminDashboard() {
   const navigate = useNavigate();
   const location = useLocation();
-  const [anchorEl, setAnchorEl] = useState(null);
+  const [menuOpen, setMenuOpen] = useState(false);
   const user = JSON.parse(localStorage.getItem('user') || '{}');
 
   const handleLogout = () => {
@@ -35,92 +17,46 @@ function AdminDashboard() {
     navigate('/login');
   };
 
-  const handleMenuOpen = (event) => {
-    setAnchorEl(event.currentTarget);
-  };
-
-  const handleMenuClose = () => {
-    setAnchorEl(null);
-  };
+  const toggleMenu = () => setMenuOpen(v => !v);
 
   const isUsersPage = location.pathname === '/admin/users';
   const isCategoriesPage = location.pathname === '/admin/categories';
 
   return (
-    <Box sx={{ display: 'flex', flexDirection: 'column', minHeight: '100vh' }}>
-      <AppBar position="static">
-        <Toolbar>
-          <DashboardIcon sx={{ mr: 2 }} />
-          <Typography variant="h6" component="div" sx={{ flexGrow: 1 }}>
-            Admin Dashboard
-          </Typography>
+    <div className="insta-page" style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>
+      <header style={{ background: 'var(--insta-primary)', color: '#fff' }}>
+        <div style={{ maxWidth: 1200, margin: '0 auto', padding: '12px 16px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+            <div style={{ fontWeight: 700 }}>Admin Dashboard</div>
+          </div>
+          <nav style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            <button className="insta-proceed" style={{ background: 'transparent', border: '1px solid #fff', color: '#fff' }} onClick={() => navigate('/admin')}>Forms</button>
+            <button className="insta-proceed" style={{ background: isCategoriesPage ? '#fff' : 'transparent', color: isCategoriesPage ? 'var(--insta-primary)' : '#fff', border: '1px solid #fff' }} onClick={() => navigate('/admin/categories')}>Categories</button>
+            <button className="insta-proceed" style={{ background: isUsersPage ? '#fff' : 'transparent', color: isUsersPage ? 'var(--insta-primary)' : '#fff', border: '1px solid #fff' }} onClick={() => navigate('/admin/users')}>Users</button>
+            <div style={{ position: 'relative' }}>
+              <button className="insta-proceed" style={{ background: 'transparent', border: '1px solid #fff', color: '#fff' }} onClick={toggleMenu} aria-expanded={menuOpen} aria-haspopup="true">
+                {user.userId || 'Account'}
+              </button>
+              {menuOpen && (
+                <div style={{ position: 'absolute', right: 0, top: '100%', background: '#fff', color: '#333', border: '1px solid var(--insta-border)', borderRadius: 6, minWidth: 200, padding: 8, zIndex: 10 }}>
+                  <div style={{ padding: '8px 10px', borderBottom: '1px solid var(--insta-border)', fontWeight: 600 }}>{user.userId}</div>
+                  <button onClick={handleLogout} style={{ display: 'block', width: '100%', textAlign: 'left', background: 'transparent', border: 'none', padding: '10px', cursor: 'pointer', color: 'var(--insta-primary)' }}>Logout</button>
+                </div>
+              )}
+            </div>
+          </nav>
+        </div>
+      </header>
 
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-            <Button
-              color="inherit"
-              onClick={() => navigate('/admin')}
-              variant={!isUsersPage && !isCategoriesPage ? 'outlined' : 'text'}
-            >
-              Forms
-            </Button>
-            <Button
-              color="inherit"
-              startIcon={<CategoryIcon />}
-              onClick={() => navigate('/admin/categories')}
-              variant={isCategoriesPage ? 'outlined' : 'text'}
-            >
-              Categories
-            </Button>
-            <Button
-              color="inherit"
-              startIcon={<ManageAccountsIcon />}
-              onClick={() => navigate('/admin/users')}
-              variant={isUsersPage ? 'outlined' : 'text'}
-            >
-              Users
-            </Button>
-
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-              <IconButton
-                color="inherit"
-                onClick={handleMenuOpen}
-              >
-                <AccountCircle />
-              </IconButton>
-              <Menu
-                anchorEl={anchorEl}
-                open={Boolean(anchorEl)}
-                onClose={handleMenuClose}
-              >
-                <MenuItem disabled>
-                  <Box>
-                    <Typography variant="body2" fontWeight="bold">
-                      {user.userId}
-                    </Typography>
-                    <Typography variant="caption" color="text.secondary">
-                      Administrator
-                    </Typography>
-                  </Box>
-                </MenuItem>
-                <MenuItem onClick={handleLogout}>
-                  <LogoutIcon fontSize="small" sx={{ mr: 1 }} />
-                  Logout
-                </MenuItem>
-              </Menu>
-            </Box>
-          </Box>
-        </Toolbar>
-      </AppBar>
-
-      <Box sx={{ flexGrow: 1 }}>
+      <main style={{ flex: 1 }}>
         <Routes>
           <Route path="/" element={<HomePage />} />
           <Route path="/form/:id" element={<HomePage />} />
           <Route path="/categories" element={<CategoryManagement />} />
           <Route path="/users" element={<UserManagement />} />
         </Routes>
-      </Box>
-    </Box>
+      </main>
+    </div>
   );
 }
 

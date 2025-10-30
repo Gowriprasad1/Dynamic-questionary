@@ -1,37 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import {
-  Box,
-  Container,
-  Typography,
-  Grid,
-  Card,
-  CardContent,
-  CardActions,
-  Button,
-  CircularProgress,
-  Alert,
-  AppBar,
-  Toolbar,
-  Tabs,
-  Tab,
-  Fab,
-  FormControl,
-  InputLabel,
-  Select,
-  MenuItem,
-  Chip,
-  Dialog,
-  DialogTitle,
-  DialogContent,
-  DialogActions,
-} from '@mui/material';
-import {
-  Add as AddIcon,
-  Edit as EditIcon,
-  Visibility as ViewIcon,
-  Delete as DeleteIcon,
-  FilterList as FilterIcon,
-} from '@mui/icons-material';
+import '../ui/insta/_form.scss';
+import { UiModal } from '../ui/insta/_form';
 import { formsAPI, categoriesAPI } from '../services/api';
 import FormBuilder from '../components/FormBuilder';
 import FormEditor from '../components/FormEditor';
@@ -226,102 +195,60 @@ const HomePage = () => {
     const primaryCategory = categories[0]; // Get the primary category for this form
     
     return (
-      <Card key={form._id} sx={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
-        <CardContent sx={{ flexGrow: 1 }}>
-          <Typography variant="h6" component="h2" gutterBottom>
-            {form.title}
-          </Typography>
+      <div key={form._id} className="insta-card admin-card" style={{ padding: 16 }}>
+        <div className="admin-body">
+          <div style={{ fontWeight: 700, fontSize: 18, marginBottom: 6 }}>{form.title}</div>
           {form.description && (
-            <Typography variant="body2" color="text.secondary" paragraph>
+            <div style={{ color: 'var(--insta-muted)', marginBottom: 8 }}>
               {form.description}
-            </Typography>
+            </div>
           )}
-          <Box sx={{ mb: 1, display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
+          <div style={{ marginBottom: 8, display: 'flex', flexWrap: 'wrap', gap: 6 }}>
             {categories.map((cat, idx) => (
-              <Chip key={idx} label={cat} size="small" color="primary" variant="outlined" />
+              <span key={idx} style={{ border: '1px solid var(--insta-primary)', color: 'var(--insta-primary)', borderRadius: 14, padding: '2px 8px', fontSize: 12 }}>{cat}</span>
             ))}
-          </Box>
-          <Typography variant="body2" color="text.secondary">
+          </div>
+          <div style={{ color: 'var(--insta-muted)', fontSize: 14 }}>
             {form.questions ? form.questions.length : form.fields?.length || 0} question{(form.questions ? form.questions.length : form.fields?.length || 0) !== 1 ? 's' : ''}
-          </Typography>
-          <Typography variant="caption" display="block" color="text.secondary">
-            Created: {new Date(form.createdAt).toLocaleDateString()}
-          </Typography>
-        </CardContent>
-        <CardActions sx={{ flexWrap: 'wrap', gap: 0.5 }}>
-          <Button
-            size="small"
-            startIcon={<ViewIcon />}
-            onClick={() => handleViewForm(form)}
-          >
-            View Form
-          </Button>
-          <Button
-            size="small"
-            startIcon={<EditIcon />}
-            onClick={() => handleEditForm(form)}
-            color="primary"
-          >
-            Edit
-          </Button>
-          <Button
-            size="small"
-            startIcon={<DeleteIcon />}
-            onClick={() => openDeleteDialog(form)}
-            color="error"
-          >
-            Delete
-          </Button>
+          </div>
+          <div style={{ color: 'var(--insta-muted)', fontSize: 12 }}>Created: {new Date(form.createdAt).toLocaleDateString()}</div>
+        </div>
+        <div className="admin-actions">
+          <button className="insta-button btn-outline-primary" onClick={() => handleViewForm(form)}>View Form</button>
+          <button className="insta-button btn-outline-primary" onClick={() => handleEditForm(form)}>Edit</button>
+          <button className="insta-button btn-outline-danger" onClick={() => openDeleteDialog(form)}>Delete</button>
           {primaryCategory && (
-            <Button
-              size="small"
-              startIcon={<AddIcon />}
-              onClick={() => handleAddQuestionToCategory(primaryCategory)}
-              variant="outlined"
-              color="success"
-            >
-              Add Question
-            </Button>
+            <button className="insta-button btn-outline-primary" onClick={() => handleAddQuestionToCategory(primaryCategory)}>Add Question</button>
           )}
-        </CardActions>
-      </Card>
+        </div>
+      </div>
     );
   };
 
   const renderFormsList = () => {
     if (loading) {
       return (
-        <Box display="flex" justifyContent="center" alignItems="center" minHeight="200px">
-          <CircularProgress />
-        </Box>
+        <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: 200 }}>
+          <div className="insta-card" style={{ padding: 16 }}>Loading forms...</div>
+        </div>
       );
     }
 
     if (error) {
       return (
-        <Alert severity="error" sx={{ margin: 2 }}>
+        <div style={{ margin: 12, color: 'var(--insta-red)', background: '#ffeef0', padding: 12, borderRadius: 8 }}>
           {error}
-        </Alert>
+        </div>
       );
     }
 
     if (forms.length === 0) {
       return (
-        <Box textAlign="center" padding={4}>
-          <Typography variant="h6" color="text.secondary" gutterBottom>
-            No forms created yet
-          </Typography>
-          <Typography variant="body2" color="text.secondary" paragraph>
-            Create your first dynamic form to get started
-          </Typography>
-          <Button
-            variant="contained"
-            startIcon={<AddIcon />}
-            onClick={() => setShowFormBuilder(true)}
-          >
-            Create Form
-          </Button>
-        </Box>
+        <div style={{ textAlign: 'center', padding: 24 }}>
+          <div style={{ fontWeight: 700, marginBottom: 6, color: 'var(--insta-muted)' }}>No forms created yet</div>
+          <div style={{ color: 'var(--insta-muted)', marginBottom: 12 }}>Create your first dynamic form to get started</div>
+          <button className="insta-button" onClick={() => setShowFormBuilder(true)}>Create Form</button>
+        </div>
       );
     }
 
@@ -329,69 +256,49 @@ const HomePage = () => {
 
     return (
       <>
-        <Box sx={{ mb: 3, display: 'flex', alignItems: 'center', gap: 2, flexWrap: 'wrap' }}>
-          <FilterIcon />
-          <FormControl sx={{ minWidth: 200 }} size="small">
-            <InputLabel>Filter by Category</InputLabel>
-            <Select
-              value={categoryFilter}
-              onChange={(e) => setCategoryFilter(e.target.value)}
-              label="Filter by Category"
-            >
-              <MenuItem value="All">All Categories</MenuItem>
+        <div style={{ marginBottom: 12, display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
+          <div style={{ color: 'var(--insta-primary)', fontWeight: 600 }}>Filter</div>
+          <div>
+            <label className="ui-input-label" style={{ display: 'block', marginBottom: 4 }}>Filter by Category</label>
+            <select className="ui-input" value={categoryFilter} onChange={(e) => setCategoryFilter(e.target.value)}>
+              <option value="All">All Categories</option>
               {categories.map((cat) => (
-                <MenuItem key={cat._id || cat.name} value={cat.name}>
-                  {cat.name}
-                </MenuItem>
+                <option key={cat._id || cat.name} value={cat.name}>{cat.name}</option>
               ))}
-            </Select>
-          </FormControl>
-          <Typography variant="body2" color="text.secondary">
+            </select>
+          </div>
+          <div style={{ color: 'var(--insta-muted)' }}>
             Showing {filteredForms.length} of {forms.length} forms
-          </Typography>
-        </Box>
-        <Grid container spacing={3}>
+          </div>
+        </div>
+        <div className="admin-grid">
           {filteredForms.map(renderFormCard)}
-        </Grid>
+        </div>
       </>
     );
   };
 
   return (
-    <Box sx={{ flexGrow: 1 }}>
-      <AppBar position="static">
-        <Toolbar>
-          <Typography variant="h6" component="div" sx={{ flexGrow: 1 }}>
-            MERN Dynamic Form Builder
-          </Typography>
-          <Tabs
-            value={selectedTab}
-            onChange={(e, newValue) => setSelectedTab(newValue)}
-            textColor="inherit"
-            indicatorColor="secondary"
-          >
-            <Tab label="Forms" />
-            {selectedForm && <Tab label="Fill Form" />}
-          </Tabs>
-        </Toolbar>
-      </AppBar>
+    <div className="insta-page" style={{ paddingBottom: 96 }}>
+      {/* <div style={{ background: 'var(--insta-primary)', color: '#fff' }}>
+        <div style={{ maxWidth: 1200, margin: '0 auto', padding: '12px 16px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+          <div style={{ fontWeight: 700 }}>MERN Dynamic Form Builder</div>
+          <div className="insta-tabs" role="tablist">
+            <button className={`insta-tab ${selectedTab === 0 ? 'active' : ''}`} onClick={() => setSelectedTab(0)}>Forms</button>
+            {selectedForm && <button className={`insta-tab ${selectedTab === 1 ? 'active' : ''}`} onClick={() => setSelectedTab(1)}>Fill Form</button>}
+          </div>
+        </div>
+      </div> */}
 
-      <Container maxWidth="lg" sx={{ marginTop: 3, marginBottom: 3 }}>
+      <div style={{ maxWidth: 1200, margin: '0 auto', padding: 16 }}>
         {selectedTab === 0 && (
           <>
             {showQuestionAdder ? (
               <>
-                <Box display="flex" justifyContent="space-between" alignItems="center" marginBottom={2}>
-                  <Typography variant="h5">
-                    Add Question to {selectedCategory} Category
-                  </Typography>
-                  <Button
-                    variant="outlined"
-                    onClick={handleCancelQuestionAdd}
-                  >
-                    Cancel
-                  </Button>
-                </Box>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
+                  <div style={{ fontWeight: 700, fontSize: 18 }}>Add Question to {selectedCategory} Category</div>
+                  <button className="insta-button" style={{ background: '#fff', color: 'var(--insta-primary)', border: '1px solid var(--insta-primary)' }} onClick={handleCancelQuestionAdd}>Cancel</button>
+                </div>
                 <QuestionAdder
                   category={selectedCategory}
                   onQuestionAdded={handleQuestionAdded}
@@ -406,17 +313,10 @@ const HomePage = () => {
               />
             ) : showFormBuilder ? (
               <>
-                <Box display="flex" justifyContent="space-between" alignItems="center" marginBottom={2}>
-                  <Typography variant="h5">
-                    {selectedCategory ? `Create ${selectedCategory} Form` : 'Create New Form'}
-                  </Typography>
-                  <Button
-                    variant="outlined"
-                    onClick={handleCancelEdit}
-                  >
-                    Cancel
-                  </Button>
-                </Box>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
+                  <div style={{ fontWeight: 700, fontSize: 18 }}>{selectedCategory ? `Create ${selectedCategory} Form` : 'Create New Form'}</div>
+                  <button className="insta-button" style={{ background: '#fff', color: 'var(--insta-primary)', border: '1px solid var(--insta-primary)' }} onClick={handleCancelEdit}>Cancel</button>
+                </div>
                 <FormBuilder 
                   onFormCreated={handleFormCreated}
                   editFormData={selectedCategory ? {
@@ -428,27 +328,13 @@ const HomePage = () => {
               </>
             ) : (
               <>
-                <Box display="flex" justifyContent="space-between" alignItems="center" marginBottom={3}>
-                  <Typography variant="h4" component="h1">
-                    Your Forms
-                  </Typography>
-                  <Box display="flex" gap={2}>
-                    <Button
-                      variant="outlined"
-                      onClick={handleCreateSampleForm}
-                      disabled={loading}
-                    >
-                      Create Sample Form
-                    </Button>
-                    <Button
-                      variant="contained"
-                      startIcon={<AddIcon />}
-                      onClick={() => setShowFormBuilder(true)}
-                    >
-                      Create New Form
-                    </Button>
-                  </Box>
-                </Box>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+                  <div style={{ fontWeight: 800, fontSize: 22 }}>Your Forms</div>
+                  <div style={{ display: 'flex', gap: 8 }}>
+                    <button className="insta-button" style={{ background: '#fff', color: 'var(--insta-primary)', border: '1px solid var(--insta-primary)' }} onClick={handleCreateSampleForm} disabled={loading}>Create Sample Form</button>
+                    <button className="insta-button" onClick={() => setShowFormBuilder(true)}>Create New Form</button>
+                  </div>
+                </div>
                 {renderFormsList()}
               </>
             )}
@@ -461,42 +347,31 @@ const HomePage = () => {
             onSuccess={handleFormSubmitted}
           />
         )}
-      </Container>
+      </div>
 
       {!showFormBuilder && !showFormEditor && !showQuestionAdder && selectedTab === 0 && (
-        <Fab
-          color="primary"
-          aria-label="add"
-          sx={{ position: 'fixed', bottom: 16, right: 16 }}
+        <button
+          className="insta-button"
+          style={{ position: 'fixed', bottom: 16, right: 16 }}
           onClick={() => setShowFormBuilder(true)}
         >
-          <AddIcon />
-        </Fab>
+          + New Form
+        </button>
       )}
 
-      <Dialog
-        open={deleteDialogOpen}
-        onClose={() => setDeleteDialogOpen(false)}
-      >
-        <DialogTitle>Delete Form</DialogTitle>
-        <DialogContent>
-          <Typography>
-            Are you sure you want to delete the form "{formToDelete?.title}"? This action cannot be undone.
-          </Typography>
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setDeleteDialogOpen(false)}>Cancel</Button>
-          <Button 
-            onClick={() => handleDeleteForm(formToDelete._id)} 
-            color="error"
-            variant="contained"
-          >
-            Delete
-          </Button>
-        </DialogActions>
-      </Dialog>
-    </Box>
+      <UiModal isShowing={deleteDialogOpen} hide={() => setDeleteDialogOpen(false)}>
+        <div style={{ fontWeight: 700, marginBottom: 8 }}>Delete Form</div>
+        <div style={{ color: 'var(--insta-muted)', marginBottom: 12 }}>
+          Are you sure you want to delete the form "{formToDelete?.title}"? This action cannot be undone.
+        </div>
+        <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8 }}>
+          <button className="insta-button btn-outline-primary" onClick={() => setDeleteDialogOpen(false)}>Cancel</button>
+          <button className="insta-button btn-solid-danger" onClick={() => handleDeleteForm(formToDelete._id)}>Delete</button>
+        </div>
+      </UiModal>
+    </div>
   );
-};
+}
+;
 
 export default HomePage;

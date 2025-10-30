@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { Navigate } from 'react-router-dom';
-import { CircularProgress, Box } from '@mui/material';
 import axios from 'axios';
+import '../ui/insta/_form.scss';
 
 const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000/api';
 
@@ -41,16 +41,9 @@ function ProtectedRoute({ children }) {
 
   if (loading) {
     return (
-      <Box
-        sx={{
-          display: 'flex',
-          justifyContent: 'center',
-          alignItems: 'center',
-          minHeight: '100vh'
-        }}
-      >
-        <CircularProgress />
-      </Box>
+      <div className="insta-page" style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        <div className="insta-card" style={{ padding: 16 }}>Checking access...</div>
+      </div>
     );
   }
 
