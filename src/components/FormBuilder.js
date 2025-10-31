@@ -607,6 +607,19 @@ const FormBuilder = ({ onFormCreated, editFormData = null, disableAddQuestion = 
                                   style={{ flex: '1 1 220px' }}
                                 />
 
+                                <div style={{ flex: '1 1 260px' }}>
+                                  <label className="ui-input-label" style={{ display: 'block', marginBottom: 4 }}>Category/Question Type</label>
+                                  <select
+                                    className="ui-input"
+                                    value={subQ.questionType || (categories[0]?.name || '')}
+                                    onChange={(e) => updateSubQuestion(index, subIndex, { questionType: e.target.value })}
+                                  >
+                                    {categories.map((cat) => (
+                                      <option key={cat._id || cat.name} value={cat.name}>{cat.name}</option>
+                                    ))}
+                                  </select>
+                                </div>
+
                                 <div style={{ flex: '1 1 220px' }}>
                                   <label className="ui-input-label" style={{ display: 'block', marginBottom: 4 }}>Option Type</label>
                                   <select
@@ -630,81 +643,91 @@ const FormBuilder = ({ onFormCreated, editFormData = null, disableAddQuestion = 
                               </div>
                             </div>
 
-                            {/* Child Validation Rules */}
-                            <div style={{ marginTop: 10 }}>
-                              <div style={{ fontWeight: 700, marginBottom: 6 }}>Child Validation Rules</div>
-                              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginBottom: 8 }}>
-                                {validatorTypes.map((vt) => {
-                                  const selected = (subQ.validator_options || []).includes(vt);
-                                  return (
+                            {/* Child Options UI (for select/radio/checkbox) */}
+                            {['select','radio','checkbox'].includes(subQ.option_type) && (
+                              <div style={{ marginTop: 10 }}>
+                                <div style={{ fontWeight: 600, marginBottom: 6 }}>Options:</div>
+                                {(subQ.options || []).map((opt, optIndex) => (
+                                  <div key={optIndex} style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
+                                    <input
+                                      className="ui-input"
+                                      placeholder={`Option key ${optIndex + 1}`}
+                                      value={opt.key || ''}
+                                      onChange={(e) => updateSubQuestionOption(index, subIndex, optIndex, 'key', e.target.value)}
+                                      style={{ flex: 1 }}
+                                    />
+                                    <input
+                                      className="ui-input"
+                                      placeholder={`Option value ${optIndex + 1}`}
+                                      value={opt.val || ''}
+                                      onChange={(e) => updateSubQuestionOption(index, subIndex, optIndex, 'val', e.target.value)}
+                                      style={{ flex: 1 }}
+                                    />
                                     <button
-                                      key={vt}
                                       type="button"
                                       className="insta-button"
-                                      style={{ background: selected ? 'var(--insta-primary)' : '#fff', color: selected ? '#fff' : 'var(--insta-primary)', border: '1px solid var(--insta-primary)' }}
-                                      onClick={() => {
-                                        const cur = new Set(subQ.validator_options || []);
-                                        if (cur.has(vt)) cur.delete(vt); else cur.add(vt);
-                                        updateSubQuestion(index, subIndex, { validator_options: Array.from(cur) });
-                                      }}
-                                    >{vt}</button>
-                                  );
-                                })}
+                                      style={{ background: '#fff', color: 'var(--insta-red)', border: '1px solid var(--insta-red)' }}
+                                      onClick={() => removeSubQuestionOption(index, subIndex, optIndex)}
+                                    >Delete</button>
+                                  </div>
+                                ))}
+                                <button type="button" className="insta-button" onClick={() => addSubQuestionOption(index, subIndex)}>Add Option</button>
                               </div>
-
-                              {validatorTypes.map((vt) => {
-                                const selected = (subQ.validator_options || []).includes(vt);
-                                const numTypes = ['max','min','maxLength','minLength'];
-                                const valObj = subQ.validator_values || {};
-                                const msgObj = subQ.error_messages || {};
-                                if (!selected) return null;
-                                return (
-                                  <div key={vt} style={{ marginBottom: 8 }}>
-                                    <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-                                      {vt === 'required' ? (
-                                        <select
-                                          className="ui-input"
-                                          style={{ flex: '1 1 200px' }}
-                                          value={(valObj?.[vt] === true || valObj?.[vt] === 'true') ? 'true' : 'false'}
-                                          onChange={(e) => {
-                                            const nextVals = { ...(subQ.validator_values || {}) };
-                                            nextVals[vt] = e.target.value === 'true';
-                                            updateSubQuestion(index, subIndex, { validator_values: nextVals });
-                                          }}
-                                        >
-                                          <option value="true">true</option>
-                                          <option value="false">false</option>
-                                        </select>
-                                      ) : (
-                                        <input
-                                          className="ui-input"
-                                          style={{ flex: '1 1 200px' }}
-                                          placeholder={`${vt} value`}
-                                          value={valObj?.[vt] ?? ''}
-                                          onChange={(e) => {
-                                            const nextVals = { ...(subQ.validator_values || {}) };
-                                            nextVals[vt] = numTypes.includes(vt) ? e.target.value : e.target.value;
-                                            updateSubQuestion(index, subIndex, { validator_values: nextVals });
-                                          }}
-                                          type={numTypes.includes(vt) ? 'number' : 'text'}
-                                        />
-                                      )}
+                            )}
+                            {validatorTypes.map((vt) => {
+                              const selected = (subQ.validator_options || []).includes(vt);
+                              const numTypes = ['max','min','maxLength','minLength'];
+                              const valObj = subQ.validator_values || {};
+                              const msgObj = subQ.error_messages || {};
+                              return (
+                                <div key={vt} style={{ marginBottom: 8 }}>
+                                  <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                                    {vt === 'required' ? (
+                                      <select
+                                        className="ui-input"
+                                        style={{ flex: '1 1 200px' }}
+                                        disabled={!selected}
+                                        value={(valObj?.[vt] === true || valObj?.[vt] === 'true') ? 'true' : 'false'}
+                                        onChange={(e) => {
+                                          const nextVals = { ...(subQ.validator_values || {}) };
+                                          nextVals[vt] = e.target.value === 'true';
+                                          updateSubQuestion(index, subIndex, { validator_values: nextVals });
+                                        }}
+                                      >
+                                        <option value="true">true</option>
+                                        <option value="false">false</option>
+                                      </select>
+                                    ) : (
                                       <input
                                         className="ui-input"
-                                        style={{ flex: '1 1 320px' }}
-                                        placeholder={`${vt} error message`}
-                                        value={msgObj?.[vt] ?? ''}
+                                        style={{ flex: '1 1 200px' }}
+                                        placeholder={`${vt} value`}
+                                        disabled={!selected}
+                                        value={valObj?.[vt] ?? ''}
                                         onChange={(e) => {
-                                          const nextMsgs = { ...(subQ.error_messages || {}) };
-                                          nextMsgs[vt] = e.target.value;
-                                          updateSubQuestion(index, subIndex, { error_messages: nextMsgs });
+                                          const nextVals = { ...(subQ.validator_values || {}) };
+                                          nextVals[vt] = numTypes.includes(vt) ? e.target.value : e.target.value;
+                                          updateSubQuestion(index, subIndex, { validator_values: nextVals });
                                         }}
+                                        type={numTypes.includes(vt) ? 'number' : 'text'}
                                       />
-                                    </div>
+                                    )}
+                                    <input
+                                      className="ui-input"
+                                      style={{ flex: '1 1 320px' }}
+                                      placeholder={`${vt} error message`}
+                                      disabled={!selected}
+                                      value={msgObj?.[vt] ?? ''}
+                                      onChange={(e) => {
+                                        const nextMsgs = { ...(subQ.error_messages || {}) };
+                                        nextMsgs[vt] = e.target.value;
+                                        updateSubQuestion(index, subIndex, { error_messages: nextMsgs });
+                                      }}
+                                    />
                                   </div>
-                                );
-                              })}
-                            </div>
+                                </div>
+                              );
+                            })}
 
                             {/* Sub-question List Items */}
                             <div style={{ marginTop: 6 }}>

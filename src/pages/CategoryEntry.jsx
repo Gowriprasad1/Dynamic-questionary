@@ -9,14 +9,6 @@ import '../ui/insta/_form.scss';
 import { InputField, UiModal } from '../ui/insta/_form';
 import UserForm from './UserForm';
 
-const DUMMY_DATA = {
-  Name: 'HariPrasad',
-  Appnumber: '987654321',
-  Mobile: '8688520261',
-  Gender: 'Male',
-  dob: '14/06/2001'
-};
-
 function formatMobile(m) {
   if (!m) return '';
   return m.replace(/(\d{4})(\d{3})(\d{3})/, '$1 $2 $3');
@@ -77,10 +69,6 @@ const CategoryEntry = () => {
       // Don't show an error to the user, just continue with the flow
     }
 
-    // default data if lookup returns nothing
-    const data = { ...DUMMY_DATA, Appnumber: appNumber };
-    setAppData(data);
-
     try {
       // attempt lookup via backend API using services
       const lookupResp = await userAPI.lookup({ appNumber });
@@ -98,17 +86,13 @@ const CategoryEntry = () => {
           setMobile(userObj.Mobile);
           dispatch(setUser(userObj));
         } else {
-          setAppData(data);
-          setMobile(data.Mobile);
-          dispatch(setUser({
-            Name: data.Name,
-            Appnumber: data.Appnumber,
-            Mobile: data.Mobile,
-          }));
+          setError('No application found for this Application Number');
+          setSubmittingApp(false);
+          return;
         }
 
       // request backend to send OTP (services)
-      const mobileToUse = (dataFromApi?.Mobile || dataFromApi?.mobile || data.Mobile || mobile);
+      const mobileToUse = (dataFromApi?.Mobile || dataFromApi?.mobile || dataFromApi?.mobileNumber || mobile);
       await userAPI.sendOtp({ mobile: mobileToUse, appNumber });
       // backend will handle generation; update mobile state and proceed
       setMobile(mobileToUse);
@@ -149,11 +133,21 @@ const CategoryEntry = () => {
     try {
       setVerifying(true);
       const mobileToUse = mobile || (appData && (appData.Mobile || appData.mobile || appData.mobileNumber));
-      const resp = await userAPI.verifyOtp({ mobile: mobileToUse, otp: code });
+      const resp = await userAPI.verifyOtp({ mobile: mobileToUse, otp: code, category, appNumber });
       console.log('verify response:', resp && resp.data);
       if (resp?.data?.success) {
         // mark verified in redux and proceed
         dispatch(setOtpVerified(true));
+        // Check progress to decide where to route
+        try {
+          const prog = await userAPI.progress({ category, appNumber, mobile: mobileToUse });
+          const page = prog?.data?.progress?.pageNumber;
+          const status = prog?.data?.progress?.status;
+          if (status === 'submitted' || page === 2) {
+            window.location.assign(`/${encodeURIComponent(category)}/review`);
+            return;
+          }
+        } catch (_) {}
         setStep('form');
         return;
       }

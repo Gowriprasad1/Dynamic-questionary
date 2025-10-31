@@ -34,7 +34,7 @@ function App() {
           {/* Public user form routes - dynamic category route */}
           <Route path="/:category" element={<CategoryEntry />} />
           <Route path="/:category/form" element={<UserForm />} />
-          <Route path="/review" element={<ReviewPage />} />
+          <Route path="/:category/review" element={<ReviewPage />} />
           <Route path="/submitted" element={<SubmittedSuccess />} />
         </Routes>
       </Router>

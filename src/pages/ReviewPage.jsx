@@ -1,20 +1,25 @@
 import React, { useEffect, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useParams } from 'react-router-dom';
 import { useSelector, useDispatch } from 'react-redux';
 import { clearAnswers } from '../store/actions';
 import '../ui/insta/_form.scss';
+import { UiModal } from '../ui/insta/_form';
 import { userAPI } from '../services/api';
 import BasicDetailsIcon from '../assets/icons/BasicDetailsIcon.svg';
 
 const ReviewPage = () => {
   const navigate = useNavigate();
+  const { category: categoryParam } = useParams();
   const dispatch = useDispatch();
   const [submitting, setSubmitting] = useState(false);
   const [tncAccepted, setTncAccepted] = useState(false);
+  const [guardOpen, setGuardOpen] = useState(false);
+  const [guardMessage, setGuardMessage] = useState('');
   const reduxAnswers = useSelector(state => state.answers || {});
   const reduxUser = useSelector(state => state.user || {});
   const reduxQuestions = useSelector(state => state.questions || []);
-  const category = useSelector(state => state.category) || reduxUser?.category || 'Unknown';
+  const reduxCategory = useSelector(state => state.category);
+  const category = categoryParam || reduxCategory || reduxUser?.category || 'Unknown';
   const answers = reduxAnswers;
   const appNumber =
     reduxUser?.Appnumber ||
@@ -22,6 +27,25 @@ const ReviewPage = () => {
     reduxUser?.applicationNumber ||
     '';
   const mobile = reduxUser?.Mobile || '';
+  // Guard: ensure progress is at page 2; otherwise show modal and redirect back to form on close
+  useEffect(() => {
+    const checkProgress = async () => {
+      try {
+        const resp = await userAPI.progress({ category, appNumber, mobile });
+        const page = resp?.data?.progress?.pageNumber;
+        const status = resp?.data?.progress?.status;
+        if (!(status === 'submitted' || page === 2)) {
+          setGuardMessage('Please submit the Personal Details page first.');
+          setGuardOpen(true);
+        }
+      } catch (_) {
+        setGuardMessage('Please submit the Personal Details page first.');
+        setGuardOpen(true);
+      }
+    };
+    checkProgress();
+  }, [category, appNumber, mobile, navigate]);
+
   // Handle browser back button to navigate to category page
   useEffect(() => {
     const handlePopState = () => {
@@ -105,6 +129,14 @@ const ReviewPage = () => {
 
   return (
     <div className="insta-page" style={{ paddingTop: 24 }}>
+      {/* Guard Modal */}
+      <UiModal isShowing={guardOpen} hide={() => { setGuardOpen(false); navigate(`/${encodeURIComponent(category)}/form`, { replace: true }); }}>
+        <div style={{ fontWeight: 700, marginBottom: 8 }}>Action Required</div>
+        <div style={{ color: 'var(--insta-muted)', marginBottom: 12 }}>{guardMessage || 'Please complete the previous page.'}</div>
+        <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
+          <button className="insta-button btn-outline-primary" onClick={() => { setGuardOpen(false); navigate(`/${encodeURIComponent(category)}/form`, { replace: true }); }}>OK</button>
+        </div>
+      </UiModal>
       <div style={{ maxWidth: 820, margin: '0 auto', padding: '16px' }}>
         <div className="insta-card" style={{ padding: 24 }}>
 
@@ -122,7 +154,11 @@ const ReviewPage = () => {
           <div style={{ marginTop: 12 }}>
             <div style={{ marginBottom: 12, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
               <div>
-                Application Number: <strong>{appNumber}</strong>
+                <div style={{ marginBottom: 4 }}>Name: <strong>{reduxUser?.Name || ''}</strong></div>
+                <div style={{ marginBottom: 4 }}>Application Number: <strong>{appNumber}</strong></div>
+                <div style={{ marginBottom: 4 }}>Mobile: <strong>{mobile}</strong></div>
+                <div style={{ marginBottom: 4 }}>Gender: <strong>{reduxUser?.Gender || ''}</strong></div>
+                <div>DOB: <strong>{reduxUser?.dob || ''}</strong></div>
               </div>
               <button className="insta-edit-chip" onClick={handleEdit} aria-label="Edit">
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -131,9 +167,6 @@ const ReviewPage = () => {
                 </svg>
                 Edit
               </button>
-            </div>
-            <div style={{ marginBottom: 12 }}>
-              Mobile: <strong>{mobile}</strong>
             </div>
 
             <div style={{ marginTop: 8 }}>

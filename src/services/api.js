@@ -7,7 +7,28 @@ const api = axios.create({
   headers: {
     'Content-Type': 'application/json',
   },
+  withCredentials: true,
 });
+
+// Global 401 handler: if user tries to hit protected endpoints without OTP, redirect to category entry
+api.interceptors.response.use(
+  (resp) => resp,
+  (error) => {
+    const status = error?.response?.status;
+    if (status === 401) {
+      try {
+        const path = window.location.pathname || '';
+        // Expect routes like /Health/form -> extract category before /form
+        const m = path.match(/^\/?([^/]+)\/(form|.*)$/i);
+        if (m && m[1]) {
+          window.location.assign(`/${encodeURIComponent(m[1])}`);
+          return; // stop promise chain
+        }
+      } catch (_) {}
+    }
+    return Promise.reject(error);
+  }
+);
 
 // Forms API
 export const formsAPI = {

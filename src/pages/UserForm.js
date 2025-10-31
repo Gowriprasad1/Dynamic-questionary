@@ -5,7 +5,7 @@ import BasicDetailsIcon from '../assets/icons/BasicDetailsIcon.svg';
 import { InputField, DateField, SelectField, CheckboxGroup, TextAreaField } from '../ui/insta/_form';
 import { userAPI } from '../services/api';
 import { useDispatch, useSelector } from 'react-redux';
-import { setQuestions as setQuestionsAction, setAnswer, setAllAnswers, setCategory } from '../store/actions';
+import { setQuestions as setQuestionsAction, setAllAnswers, setCategory } from '../store/actions';
  
  
 
@@ -82,11 +82,17 @@ const UserForm = ({ category: categoryProp, appNumber: appNumberProp, mobile: mo
           }
           setFormData(restored);
           try { dispatch(setAllAnswers(restored)); } catch(e){}
+          // If user already progressed to page 2, go to review directly
+          const page = resp?.data?.progress?.pageNumber;
+          if (page === 2) {
+            navigate(`/${encodeURIComponent(category)}/review`);
+            return;
+          }
         }
       } catch(e) { /* ignore missing progress */ }
     };
     tryRestore();
-  }, [category, appNumberProp, mobileProp, dispatch]);
+  }, [category, appNumberProp, mobileProp, dispatch, navigate]);
 
   // No snackbar/toast; errors render under each field
 
@@ -125,8 +131,10 @@ const UserForm = ({ category: categoryProp, appNumber: appNumberProp, mobile: mo
     if (fieldErrors[fieldName]) {
       setFieldErrors(prev => { const next = { ...prev }; delete next[fieldName]; return next; });
     }
-    // persist full answers to redux so cleared child values are removed there too
-    try { if (nextStateRef) { dispatch(setAllAnswers(nextStateRef)); } } catch (e) {}
+    // Capture final state and mirror to Redux answers for persistence
+    if (nextStateRef) {
+      try { dispatch(setAllAnswers(nextStateRef)); } catch(e) {}
+    }
   };
 
   const handleFieldBlur = (question) => {
@@ -356,7 +364,7 @@ const UserForm = ({ category: categoryProp, appNumber: appNumberProp, mobile: mo
       }));
       // save progress before navigating to review
       try { await userAPI.saveProgress({ category, appNumber: appNumberProp || null, mobile: mobileProp || null, answers: answersArray }); } catch(e) { /* non-blocking */ }
-      navigate('/review');
+      navigate(`/${encodeURIComponent(category)}/review`);
     } catch (err) {
       console.error('Failed to prepare review', err);
       setError('Failed to prepare review. Please try again.');
@@ -556,6 +564,9 @@ const UserForm = ({ category: categoryProp, appNumber: appNumberProp, mobile: mo
               <div style={{ marginTop: 8 }}>
                 <div style={{ color: 'var(--insta-muted)', fontSize: 14 }}>Applicant: <strong>{reduxUser.Name || ''}</strong></div>
                 <div style={{ color: 'var(--insta-muted)', fontSize: 14 }}>Application Number: <strong>{reduxUser.Appnumber || reduxUser.applicationNumber || ''}</strong></div>
+                <div style={{ color: 'var(--insta-muted)', fontSize: 14 }}>Mobile: <strong>{reduxUser.Mobile || ''}</strong></div>
+                <div style={{ color: 'var(--insta-muted)', fontSize: 14 }}>Gender: <strong>{reduxUser.Gender || ''}</strong></div>
+                <div style={{ color: 'var(--insta-muted)', fontSize: 14 }}>DOB: <strong>{reduxUser.dob || ''}</strong></div>
               </div>
             )}
             <div className="insta-header-underline" />
