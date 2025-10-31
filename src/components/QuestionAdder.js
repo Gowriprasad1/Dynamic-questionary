@@ -163,6 +163,8 @@ const QuestionAdder = ({ category, onQuestionAdded, onCancel }) => {
       },
       validator_options: [],
       triggerValue: '', // User will specify which parent answer triggers this
+      children: '', // Answers that will trigger this child's child
+      subQuestions: [], // Child's child questions
       parentQuestionId: question.questionId,
       order: question.subQuestions.length,
       // list items for the child question
@@ -243,6 +245,109 @@ const QuestionAdder = ({ category, onQuestionAdded, onCancel }) => {
 
   const updateSubQuestion = (updates) => {
     setCurrentSubQuestion({ ...currentSubQuestion, ...updates });
+  };
+
+  // Nested child's child handlers (within currentSubQuestion)
+  const initializeNestedQuestion = () => {
+    return {
+      question: '',
+      questionType: currentSubQuestion?.questionType || question.questionType,
+      questionId: '',
+      questionNumber: '',
+      option_type: 'text',
+      options: [],
+      validator_values: {
+        max: '', min: '', maxDate: '', minDate: '', pattern: '',
+        maxLength: '', minLength: '', maxPastDays: '', maxFutureDays: '', required: false
+      },
+      error_messages: {
+        max: '', min: '', maxDate: '', minDate: '', pattern: '', required: '',
+        maxLength: '', minLength: '', maxPastDays: '', maxFutureDays: ''
+      },
+      validator_options: [],
+      triggerValue: '', // triggered by child answer
+      children: '', // to trigger next level (if any)
+      parentQuestionId: currentSubQuestion?.questionId || '',
+      order: (currentSubQuestion?.subQuestions?.length || 0),
+      listItems: [],
+    };
+  };
+
+  const [showNestedForm, setShowNestedForm] = useState(false);
+  const [currentNestedQuestion, setCurrentNestedQuestion] = useState(null);
+
+  const addNestedSubQuestion = () => {
+    if (!currentSubQuestion) return;
+    setCurrentNestedQuestion(initializeNestedQuestion());
+    setShowNestedForm(true);
+  };
+
+  const updateNestedSubQuestion = (updates) => {
+    setCurrentNestedQuestion({ ...currentNestedQuestion, ...updates });
+  };
+
+  const saveNestedSubQuestion = () => {
+    if (!currentNestedQuestion?.question?.trim()) {
+      setError("Child's child question text is required");
+      return;
+    }
+    if (!currentNestedQuestion?.questionId?.trim()) {
+      setError("Child's child Question ID is required");
+      return;
+    }
+    const arr = [...(currentSubQuestion.subQuestions || []), currentNestedQuestion];
+    updateSubQuestion({ subQuestions: arr });
+    setCurrentNestedQuestion(null);
+    setShowNestedForm(false);
+    setError('');
+  };
+
+  const cancelNestedSubQuestion = () => {
+    setCurrentNestedQuestion(null);
+    setShowNestedForm(false);
+    setError('');
+  };
+
+  const removeNestedSubQuestion = (index) => {
+    const arr = (currentSubQuestion.subQuestions || []).filter((_, i) => i !== index);
+    updateSubQuestion({ subQuestions: arr });
+  };
+
+  // Nested list item handlers (labels)
+  const addNestedListItem = () => {
+    const list = [...(currentNestedQuestion?.listItems || []), ''];
+    updateNestedSubQuestion({ listItems: list });
+  };
+
+  const updateNestedListItem = (itemIndex, value) => {
+    const list = [...(currentNestedQuestion?.listItems || [])];
+    list[itemIndex] = value;
+    updateNestedSubQuestion({ listItems: list });
+  };
+
+  const removeNestedListItem = (itemIndex) => {
+    const list = (currentNestedQuestion?.listItems || []).filter((_, i) => i !== itemIndex);
+    updateNestedSubQuestion({ listItems: list });
+  };
+
+  // Nested validator handlers (toggle/value/message)
+  const toggleNestedValidatorOption = (validatorType) => {
+    const vopts = Array.isArray(currentNestedQuestion?.validator_options) ? [...currentNestedQuestion.validator_options] : [];
+    const idx = vopts.indexOf(validatorType);
+    if (idx > -1) vopts.splice(idx, 1); else vopts.push(validatorType);
+    updateNestedSubQuestion({ validator_options: vopts });
+  };
+
+  const updateNestedValidatorValue = (validatorType, value) => {
+    const vals = { ...(currentNestedQuestion?.validator_values || {}) };
+    vals[validatorType] = value;
+    updateNestedSubQuestion({ validator_values: vals });
+  };
+
+  const updateNestedErrorMessage = (validatorType, value) => {
+    const msgs = { ...(currentNestedQuestion?.error_messages || {}) };
+    msgs[validatorType] = value;
+    updateNestedSubQuestion({ error_messages: msgs });
   };
 
   const updateSubQuestionOption = (optionIndex, field, value) => {
@@ -348,10 +453,15 @@ const QuestionAdder = ({ category, onQuestionAdded, onCancel }) => {
     const processedQuestion = {
       ...question,
       validators: generateValidatorsObject(question),
-      subQuestions: question.subQuestions.map((subQ, index) => ({
+      subQuestions: (question.subQuestions || []).map((subQ, index) => ({
         ...subQ,
         validators: generateValidatorsObject(subQ),
         order: index,
+        subQuestions: (subQ.subQuestions || []).map((gc, gcIndex) => ({
+          ...gc,
+          validators: generateValidatorsObject(gc),
+          order: gcIndex,
+        })),
       })),
     };
     
@@ -618,8 +728,120 @@ const QuestionAdder = ({ category, onQuestionAdded, onCancel }) => {
               />
               <div style={{ fontSize: 12, color: 'var(--insta-muted)' }}>Which parent answer shows this sub-question</div>
 
+              <input
+                className="ui-input"
+                placeholder="Children (Trigger for sub-questions)"
+                value={currentSubQuestion.children || ''}
+                onChange={(e) => updateSubQuestion({ children: e.target.value })}
+              />
+              <div style={{ fontSize: 12, color: 'var(--insta-muted)' }}>Comma-separated answers from this child that will show its child questions</div>
+
               {renderSubQuestionOptions()}
               {renderSubQuestionValidatorSection()}
+
+              {/* Child's Child Questions (inside child form) */}
+              <div style={{ marginTop: 8, padding: 12, border: '1px dashed var(--insta-border)', borderRadius: 8 }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
+                  <div style={{ fontWeight: 700 }}>Child's Child Questions</div>
+                  <button className="insta-button" type="button" onClick={addNestedSubQuestion} disabled={showNestedForm}>Add Child Question</button>
+                </div>
+
+                {(currentSubQuestion.subQuestions || []).length > 0 && (
+                  <div style={{ marginBottom: 8 }}>
+                    {(currentSubQuestion.subQuestions || []).map((gc, gcIndex) => (
+                      <div key={gcIndex} style={{ padding: 10, marginBottom: 8, border: '1px solid var(--insta-border)', borderRadius: 8, background: '#fff', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <div>
+                          <div style={{ fontWeight: 600 }}>{gc.questionNumber ? `${gc.questionNumber}. ` : ''}{gc.question || 'Untitled'}</div>
+                          <div style={{ fontSize: 12, color: 'var(--insta-muted)' }}>ID: {gc.questionId} | Type: {gc.option_type}{gc.triggerValue ? ` | Trigger: "${gc.triggerValue}"` : ''}</div>
+                        </div>
+                        <button className="insta-button" style={{ background: '#fff', color: 'var(--insta-red)', border: '1px solid var(--insta-red)' }} type="button" onClick={() => removeNestedSubQuestion(gcIndex)}>Delete</button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                {showNestedForm && currentNestedQuestion && (
+                  <div className="insta-card" style={{ padding: 12, background: '#fff' }}>
+                    <div style={{ fontWeight: 700, marginBottom: 6 }}>New Child's Child Question</div>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                      <input className="ui-input" placeholder="Child's Child Question Text" value={currentNestedQuestion.question} onChange={(e) => updateNestedSubQuestion({ question: e.target.value })} />
+                      <input className="ui-input" placeholder="Question Number (auto or e.g., 1a)" value={currentNestedQuestion.questionNumber || ''} onChange={(e) => updateNestedSubQuestion({ questionNumber: e.target.value })} />
+                      <div style={{ display: 'flex', gap: 8 }}>
+                        <input className="ui-input" placeholder="Question ID" value={currentNestedQuestion.questionId} onChange={(e) => updateNestedSubQuestion({ questionId: e.target.value })} style={{ flex: 1 }} />
+                        <div style={{ flex: 1 }}>
+                          <label className="ui-input-label" style={{ display: 'block', marginBottom: 4 }}>Option Type</label>
+                          <select className="ui-input" value={currentNestedQuestion.option_type} onChange={(e) => updateNestedSubQuestion({ option_type: e.target.value })}>
+                            {fieldTypes.map((type) => (
+                              <option key={type.value} value={type.value}>{type.label}</option>
+                            ))}
+                          </select>
+                        </div>
+                      </div>
+                      <input className="ui-input" placeholder="Trigger Value (child answer)" value={currentNestedQuestion.triggerValue || ''} onChange={(e) => updateNestedSubQuestion({ triggerValue: e.target.value })} />
+                      <input className="ui-input" placeholder="Children (Trigger for sub-questions)" value={currentNestedQuestion.children || ''} onChange={(e) => updateNestedSubQuestion({ children: e.target.value })} />
+
+                      {/* Labels for child's child */}
+                      <div style={{ marginTop: 6 }}>
+                        <div style={{ fontSize: 12, color: 'var(--insta-muted)', marginBottom: 4 }}>Question Lables</div>
+                        {(currentNestedQuestion.listItems || []).map((item, itemIndex) => (
+                          <div key={itemIndex} style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
+                            <input className="ui-input" placeholder={`Item ${itemIndex + 1}`} value={item} onChange={(e) => updateNestedListItem(itemIndex, e.target.value)} style={{ flex: 1 }} />
+                            <button className="insta-button" type="button" style={{ background: '#fff', color: 'var(--insta-red)', border: '1px solid var(--insta-red)' }} onClick={() => removeNestedListItem(itemIndex)}>Delete</button>
+                          </div>
+                        ))}
+                        <button className="insta-button" type="button" onClick={addNestedListItem}>Add Lable</button>
+                      </div>
+
+                      {/* Validation Rules for child's child */}
+                      <div style={{ marginTop: 12 }}>
+                        <div style={{ fontWeight: 700, marginBottom: 6 }}>Validation Rules</div>
+                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginBottom: 8 }}>
+                          {validatorTypes.map((validatorType) => (
+                            <button
+                              key={validatorType}
+                              type="button"
+                              className="insta-button"
+                              style={{ background: currentNestedQuestion.validator_options?.includes(validatorType) ? 'var(--insta-primary)' : '#fff', color: currentNestedQuestion.validator_options?.includes(validatorType) ? '#fff' : 'var(--insta-primary)', border: '1px solid var(--insta-primary)' }}
+                              onClick={() => toggleNestedValidatorOption(validatorType)}
+                            >
+                              {validatorType}
+                            </button>
+                          ))}
+                        </div>
+                        {(currentNestedQuestion.validator_options || []).map((validatorType) => (
+                          <div key={validatorType} style={{ marginBottom: 8 }}>
+                            <div style={{ fontSize: 12, color: 'var(--insta-muted)', marginBottom: 4 }}>
+                              {validatorType.charAt(0).toUpperCase() + validatorType.slice(1)} Validator
+                            </div>
+                            <div style={{ display: 'flex', gap: 8 }}>
+                              <input
+                                className="ui-input"
+                                placeholder={`${validatorType} value`}
+                                value={(currentNestedQuestion.validator_values || {})[validatorType] || ''}
+                                onChange={(e) => updateNestedValidatorValue(validatorType, e.target.value)}
+                                type={['max', 'min', 'maxLength', 'minLength'].includes(validatorType) ? 'number' : 'text'}
+                                style={{ flex: 1 }}
+                              />
+                              <input
+                                className="ui-input"
+                                placeholder="Error message"
+                                value={(currentNestedQuestion.error_messages || {})[validatorType] || ''}
+                                onChange={(e) => updateNestedErrorMessage(validatorType, e.target.value)}
+                                style={{ flex: 1 }}
+                              />
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+
+                      <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8 }}>
+                        <button className="insta-button" type="button" style={{ background: '#fff', color: 'var(--insta-primary)', border: '1px solid var(--insta-primary)' }} onClick={cancelNestedSubQuestion}>Cancel</button>
+                        <button className="insta-button" type="button" onClick={saveNestedSubQuestion}>Save Child Question</button>
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </div>
 
               <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8 }}>
                 <button className="insta-button" style={{ background: '#fff', color: 'var(--insta-primary)', border: '1px solid var(--insta-primary)' }} onClick={cancelSubQuestion}>Cancel</button>

@@ -9,6 +9,7 @@ const FormEditor = ({ formData, onFormUpdated, onCancel }) => {
   const [questionToDelete, setQuestionToDelete] = useState(null);
   const [editingQuestionIndex, setEditingQuestionIndex] = useState(null);
   const [editingSubQuestion, setEditingSubQuestion] = useState(null); // { parentIndex, subIndex }
+  const [editingNestedPath, setEditingNestedPath] = useState(null); // e.g., [parentIndex, subIndex, grandIndex, ...]
   const [showAddQuestion, setShowAddQuestion] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -21,11 +22,21 @@ const FormEditor = ({ formData, onFormUpdated, onCancel }) => {
       // Editing a sub-question
       setEditingSubQuestion({ parentIndex, subIndex });
       setEditingQuestionIndex(null);
+      setEditingNestedPath(null);
     } else {
       // Editing a parent question
       setEditingQuestionIndex(parentIndex);
       setEditingSubQuestion(null);
+      setEditingNestedPath(null);
     }
+    setShowAddQuestion(false);
+  };
+
+  // Edit for grandchildren or deeper
+  const handleEditNested = (path) => {
+    setEditingQuestionIndex(null);
+    setEditingSubQuestion(null);
+    setEditingNestedPath(path); // array of indices
     setShowAddQuestion(false);
   };
 
@@ -35,7 +46,21 @@ const FormEditor = ({ formData, onFormUpdated, onCancel }) => {
   };
 
   const confirmDelete = () => {
-    if (questionToDelete.subIndex !== null) {
+    if (Array.isArray(questionToDelete.path)) {
+      // Delete arbitrary depth
+      const updated = [...questions];
+      const path = questionToDelete.path;
+      if (path.length >= 2) {
+        let parent = updated[path[0]];
+        for (let i = 1; i < path.length - 1; i++) {
+          parent = parent.subQuestions[path[i]];
+        }
+        const lastIndex = path[path.length - 1];
+        parent.subQuestions = parent.subQuestions.filter((_, i) => i !== lastIndex);
+        setQuestions(updated);
+        setSuccess('Sub-question deleted successfully');
+      }
+    } else if (questionToDelete.subIndex !== null) {
       // Delete a sub-question
       const updatedQuestions = [...questions];
       const parentQuestion = updatedQuestions[questionToDelete.parentIndex];
@@ -59,7 +84,19 @@ const FormEditor = ({ formData, onFormUpdated, onCancel }) => {
     // Extract the questions from the saved form data
     const savedQuestions = savedFormData.questions || [];
     
-    if (editingSubQuestion !== null) {
+    if (editingNestedPath !== null) {
+      // update at arbitrary depth
+      const updated = [...questions];
+      const val = savedQuestions[0];
+      const path = editingNestedPath;
+      let parent = updated[path[0]];
+      for (let i = 1; i < path.length - 1; i++) {
+        parent = parent.subQuestions[path[i]];
+      }
+      parent.subQuestions[path[path.length - 1]] = val;
+      setQuestions(updated);
+      setSuccess('Sub-question updated successfully');
+    } else if (editingSubQuestion !== null) {
       // Update existing sub-question
       const updatedQuestions = [...questions];
       const parentQuestion = updatedQuestions[editingSubQuestion.parentIndex];
@@ -83,6 +120,7 @@ const FormEditor = ({ formData, onFormUpdated, onCancel }) => {
     
     setEditingQuestionIndex(null);
     setEditingSubQuestion(null);
+    setEditingNestedPath(null);
     setShowAddQuestion(false);
     setTimeout(() => setSuccess(''), 3000);
   };
@@ -90,6 +128,7 @@ const FormEditor = ({ formData, onFormUpdated, onCancel }) => {
   const handleCancelQuestionEdit = () => {
     setEditingQuestionIndex(null);
     setEditingSubQuestion(null);
+    setEditingNestedPath(null);
     setShowAddQuestion(false);
   };
 
@@ -121,51 +160,37 @@ const FormEditor = ({ formData, onFormUpdated, onCancel }) => {
     }
   };
 
-  // Auto-renumber questions sequentially
+  // Auto-renumber questions sequentially (hierarchical: 1, 1.1, 1.1.1, ...)
   const autoRenumberQuestions = () => {
-    // First sort questions by their current question number
-    const sortedQuestions = sortQuestionsByNumber(questions);
-    
-    // Then renumber them sequentially based on sorted order
-    const renumbered = sortedQuestions.map((q, index) => ({
-      ...q,
-      questionNumber: String(index + 1),
-      subQuestions: q.subQuestions?.map((subQ, subIndex) => ({
-        ...subQ,
-        questionNumber: `${index + 1}${String.fromCharCode(97 + subIndex)}` // 1a, 1b, etc.
-      })) || []
-    }));
+    const sorted = sortQuestionsByNumber(questions);
+    const assign = (nodes, prefix = '') => (nodes || []).map((n, idx) => {
+      const num = prefix ? `${prefix}.${idx + 1}` : String(idx + 1);
+      return {
+        ...n,
+        questionNumber: num,
+        subQuestions: assign(n.subQuestions || [], num)
+      };
+    });
+    const renumbered = assign(sorted);
     setQuestions(renumbered);
     setSuccess('Questions renumbered successfully');
     setTimeout(() => setSuccess(''), 3000);
   };
 
-  const sortQuestionsByNumber = (questions) => {
-    return [...questions].sort((a, b) => {
-      // Extract numeric part and letter suffix from question numbers
-      const parseQuestionNumber = (qNum) => {
-        if (!qNum) return { num: 999999, letter: '' };
-        const match = qNum.match(/^(\d+)([a-z]*)/);
-        if (match) {
-          return { num: parseInt(match[1]), letter: match[2] || '' };
-        }
-        return { num: 999999, letter: '' };
-      };
-      
-      const aParsed = parseQuestionNumber(a.questionNumber);
-      const bParsed = parseQuestionNumber(b.questionNumber);
-      
-      // First compare by number
-      if (aParsed.num !== bParsed.num) {
-        return aParsed.num - bParsed.num;
+  const sortQuestionsByNumber = (arr) => {
+    const parse = (q) => String(q || '')
+      .split('.')
+      .map((seg) => (seg === '' ? Number.MAX_SAFE_INTEGER : parseInt(seg, 10)))
+      .map((n) => (isNaN(n) ? Number.MAX_SAFE_INTEGER : n));
+    return [...arr].sort((a, b) => {
+      const aa = parse(a.questionNumber);
+      const bb = parse(b.questionNumber);
+      const len = Math.max(aa.length, bb.length);
+      for (let i = 0; i < len; i++) {
+        const av = aa[i] ?? Number.MAX_SAFE_INTEGER;
+        const bv = bb[i] ?? Number.MAX_SAFE_INTEGER;
+        if (av !== bv) return av - bv;
       }
-      
-      // If numbers are equal, compare by letter (a comes before b)
-      if (aParsed.letter !== bParsed.letter) {
-        return aParsed.letter.localeCompare(bParsed.letter);
-      }
-      
-      // If both are equal, sort by order as fallback
       return (a.order || 0) - (b.order || 0);
     });
   };
@@ -179,110 +204,93 @@ const FormEditor = ({ formData, onFormUpdated, onCancel }) => {
         </div>
       );
     }
-
-    // Flatten questions with their sub-questions for display
-    const flattenedQuestions = [];
-    sortQuestionsByNumber(questions).forEach((question) => {
-      const originalIndex = questions.findIndex(q => q.questionId === question.questionId);
-      flattenedQuestions.push({ ...question, originalIndex, isSubQuestion: false });
-      if (question.subQuestions && question.subQuestions.length > 0) {
-        const sortedSubQuestions = sortQuestionsByNumber(question.subQuestions);
-        sortedSubQuestions.forEach((subQ) => {
-          const subIndex = question.subQuestions.findIndex(sq => sq.questionId === subQ.questionId);
-          flattenedQuestions.push({ 
-            ...subQ, 
-            originalIndex, 
-            subIndex,
-            isSubQuestion: true, 
-            parentQuestion: question 
-          });
-        });
-      }
-    });
-
+    const renderNode = (node, depth, path) => {
+      const isSub = depth > 0;
+      const key = `${node.questionId || ''}-${depth}-${path.join('-')}`;
+      const tools = (
+        <div style={{ display: 'flex', gap: 6 }}>
+          <button
+            className="insta-button"
+            style={{ background: '#fff', color: 'var(--insta-primary)', border: '1px solid var(--insta-primary)' }}
+            onClick={() => {
+              if (depth === 0) return handleEditQuestion(path[0], null);
+              if (depth === 1) return handleEditQuestion(path[0], path[1]);
+              return handleEditNested(path);
+            }}
+            title={depth >= 1 ? 'Edit sub-question' : 'Edit question'}
+          >
+            Edit
+          </button>
+          <button
+            className="insta-button"
+            style={{ background: '#fff', color: 'var(--insta-red)', border: '1px solid var(--insta-red)' }}
+            onClick={() => {
+              if (depth === 0) return handleDeleteQuestion(path[0], null);
+              if (depth === 1) return handleDeleteQuestion(path[0], path[1]);
+              // depth >= 2: delete by path
+              setQuestionToDelete({ path });
+              setDeleteDialogOpen(true);
+            }}
+            title={depth >= 1 ? 'Delete sub-question' : 'Delete question'}
+          >
+            Delete
+          </button>
+        </div>
+      );
+      return (
+        <div
+          key={key}
+          className="insta-card"
+          style={{
+            marginBottom: 12,
+            padding: 12,
+            marginLeft: depth * 16,
+            background: isSub ? '#f7f9ff' : '#fff',
+            borderLeft: isSub ? '4px solid var(--insta-primary)' : 'none'
+          }}
+        >
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+            <div style={{ flex: 1 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 6 }}>
+                <span style={{ border: '1px solid var(--insta-primary)', color: 'var(--insta-primary)', borderRadius: 10, padding: '2px 8px', fontSize: 12 }}>
+                  {node.questionNumber ? `Q${node.questionNumber}` : ''}
+                </span>
+                {isSub && (
+                  <span style={{ border: '1px solid #888', color: '#555', borderRadius: 10, padding: '2px 8px', fontSize: 12 }}>Sub-Question</span>
+                )}
+                <span style={{ border: '1px solid var(--insta-primary)', color: 'var(--insta-primary)', borderRadius: 10, padding: '2px 8px', fontSize: 12 }}>{node.questionType}</span>
+                <span style={{ border: '1px solid #ccc', color: '#555', borderRadius: 10, padding: '2px 8px', fontSize: 12 }}>{node.option_type}</span>
+                {node.validator_values?.required && (
+                  <span style={{ border: '1px solid var(--insta-red)', color: 'var(--insta-red)', borderRadius: 10, padding: '2px 8px', fontSize: 12 }}>Required</span>
+                )}
+              </div>
+              <div style={{ fontWeight: 700, marginBottom: 6 }}>
+                {node.questionNumber ? `${node.questionNumber}. ` : ''}{node.question}
+              </div>
+              <div style={{ fontSize: 12, color: 'var(--insta-muted)' }}>ID: {node.questionId}</div>
+              {depth === 1 && (
+                <div style={{ fontSize: 12, color: 'var(--insta-muted)' }}>Triggered by: {questions[path[0]]?.children}</div>
+              )}
+            </div>
+            {tools}
+          </div>
+          {(node.subQuestions || []).length > 0 && (node.subQuestions).map((sq, i) => (
+            <React.Fragment key={`${key}-c-${i}`}>
+              {renderNode(sq, depth + 1, [...path, i])}
+            </React.Fragment>
+          ))}
+        </div>
+      );
+    };
     return (
       <div>
-        {flattenedQuestions.map((item, displayIndex) => {
-          const question = item; // unified reference
-          const hasSubQuestions = !item.isSubQuestion && question.subQuestions && question.subQuestions.length > 0;
-
-          return (
-            <div
-              key={`${question.questionId || displayIndex}-${item.isSubQuestion ? 'sub' : 'main'}`}
-              className="insta-card"
-              style={{
-                marginBottom: 12,
-                padding: 12,
-                marginLeft: item.isSubQuestion ? 16 : 0,
-                background: item.isSubQuestion ? '#f7f9ff' : '#fff',
-                borderLeft: item.isSubQuestion ? '4px solid var(--insta-primary)' : 'none'
-              }}
-            >
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-                <div style={{ flex: 1 }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 6 }}>
-                    <span style={{ border: '1px solid var(--insta-primary)', color: 'var(--insta-primary)', borderRadius: 10, padding: '2px 8px', fontSize: 12 }}>
-                      {question.questionNumber ? `Q${question.questionNumber}` : `Q${displayIndex + 1}`}
-                    </span>
-                    {item.isSubQuestion && (
-                      <span style={{ border: '1px solid #888', color: '#555', borderRadius: 10, padding: '2px 8px', fontSize: 12 }}>Sub-Question</span>
-                    )}
-                    <span style={{ border: '1px solid var(--insta-primary)', color: 'var(--insta-primary)', borderRadius: 10, padding: '2px 8px', fontSize: 12 }}>{question.questionType}</span>
-                    <span style={{ border: '1px solid #ccc', color: '#555', borderRadius: 10, padding: '2px 8px', fontSize: 12 }}>{question.option_type}</span>
-                    {question.validator_values?.required && (
-                      <span style={{ border: '1px solid var(--insta-red)', color: 'var(--insta-red)', borderRadius: 10, padding: '2px 8px', fontSize: 12 }}>Required</span>
-                    )}
-                  </div>
-                  <div style={{ fontWeight: 700, marginBottom: 6 }}>
-                    {question.questionNumber ? `${question.questionNumber}. ` : ''}{question.question}
-                  </div>
-                  <div style={{ fontSize: 12, color: 'var(--insta-muted)' }}>ID: {question.questionId}</div>
-                  {item.isSubQuestion && (
-                    <div style={{ fontSize: 12, color: 'var(--insta-muted)' }}>Triggered by: {item.parentQuestion?.children}</div>
-                  )}
-                  {hasSubQuestions && (
-                    <div style={{ marginTop: 6, display: 'flex', alignItems: 'center', gap: 6 }}>
-                      <span style={{ border: '1px solid #6aa3ff', color: '#2764c7', borderRadius: 10, padding: '2px 8px', fontSize: 12 }}>
-                        {question.subQuestions.length} sub-question{question.subQuestions.length !== 1 ? 's' : ''}
-                      </span>
-                      <span style={{ fontSize: 12, color: 'var(--insta-muted)' }}>(Triggered by: {question.children})</span>
-                    </div>
-                  )}
-                </div>
-                <div style={{ display: 'flex', gap: 6 }}>
-                  <button
-                    className="insta-button"
-                    style={{ background: '#fff', color: 'var(--insta-primary)', border: '1px solid var(--insta-primary)' }}
-                    onClick={() => handleEditQuestion(
-                      item.originalIndex, 
-                      item.isSubQuestion ? item.subIndex : null
-                    )}
-                    title={item.isSubQuestion ? 'Edit sub-question' : 'Edit question'}
-                  >
-                    Edit
-                  </button>
-                  <button
-                    className="insta-button"
-                    style={{ background: '#fff', color: 'var(--insta-red)', border: '1px solid var(--insta-red)' }}
-                    onClick={() => handleDeleteQuestion(
-                      item.originalIndex,
-                      item.isSubQuestion ? item.subIndex : null
-                    )}
-                    title={item.isSubQuestion ? 'Delete sub-question' : 'Delete question'}
-                  >
-                    Delete
-                  </button>
-                </div>
-              </div>
-            </div>
-          );
-        })}
+        {sortQuestionsByNumber(questions).map((q, i) => renderNode(q, 0, [i]))}
       </div>
     );
   };
 
   // If editing a question or adding a new one, show the FormBuilder
-  if (editingQuestionIndex !== null || editingSubQuestion !== null || showAddQuestion) {
+  if (editingQuestionIndex !== null || editingSubQuestion !== null || editingNestedPath !== null || showAddQuestion) {
     let questionToEdit = null;
     
     if (editingSubQuestion !== null) {
@@ -291,6 +299,13 @@ const FormEditor = ({ formData, onFormUpdated, onCancel }) => {
     } else if (editingQuestionIndex !== null) {
       // Editing a parent question
       questionToEdit = questions[editingQuestionIndex];
+    } else if (editingNestedPath !== null) {
+      // walk by path: [p, s, g, ...]
+      let node = questions[editingNestedPath[0]];
+      for (let i = 1; i < editingNestedPath.length; i++) {
+        node = node.subQuestions[editingNestedPath[i]];
+      }
+      questionToEdit = node;
     }
     
     // Create a temporary form with just this one question for editing

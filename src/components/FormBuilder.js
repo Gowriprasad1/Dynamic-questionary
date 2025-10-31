@@ -143,6 +143,29 @@ const FormBuilder = ({ onFormCreated, editFormData = null, disableAddQuestion = 
     updateSubQuestion(questionIndex, subQuestionIndex, { listItems: newList });
   };
 
+  // Nested (child's child) handlers - minimal
+  const addNestedSubQuestion = (questionIndex, subQuestionIndex) => {
+    const question = questions[questionIndex];
+    const subQuestion = question.subQuestions[subQuestionIndex];
+    const newChild = createEmptyQuestion((subQuestion.subQuestions?.length || 0));
+    const next = [...(subQuestion.subQuestions || []), newChild];
+    updateSubQuestion(questionIndex, subQuestionIndex, { subQuestions: next });
+  };
+
+  const updateNestedSubQuestion = (questionIndex, subQuestionIndex, nestedIndex, updates) => {
+    const question = questions[questionIndex];
+    const subQuestion = question.subQuestions[subQuestionIndex];
+    const arr = (subQuestion.subQuestions || []).map((n, i) => i === nestedIndex ? { ...n, ...updates } : n);
+    updateSubQuestion(questionIndex, subQuestionIndex, { subQuestions: arr });
+  };
+
+  const removeNestedSubQuestion = (questionIndex, subQuestionIndex, nestedIndex) => {
+    const question = questions[questionIndex];
+    const subQuestion = question.subQuestions[subQuestionIndex];
+    const arr = (subQuestion.subQuestions || []).filter((_, i) => i !== nestedIndex);
+    updateSubQuestion(questionIndex, subQuestionIndex, { subQuestions: arr });
+  };
+
   const updateSubQuestion = (questionIndex, subQuestionIndex, updates) => {
     const question = questions[questionIndex];
     const updatedSubQuestions = question.subQuestions.map((subQ, i) =>
@@ -340,10 +363,24 @@ const FormBuilder = ({ onFormCreated, editFormData = null, disableAddQuestion = 
   setLoading(true);
   setError('');
       
+      // Auto-generate hierarchical numbering: 1, 1.1, 1.1.1, ...
+      const assignNumbers = (nodes, prefix = '') => {
+        return (nodes || []).map((node, idx) => {
+          const number = prefix ? `${prefix}.${idx + 1}` : String(idx + 1);
+          const childWithNums = assignNumbers(node.subQuestions || [], number);
+          return {
+            ...node,
+            questionNumber: number, // overwrite any manual number on save
+            subQuestions: childWithNums,
+          };
+        });
+      };
+      const questionsWithNumbers = assignNumbers(questions);
+
       const formData = {
         title: formTitle,
         description: formDescription,
-        questions: questions.map((question, index) => {
+        questions: questionsWithNumbers.map((question, index) => {
           const fallbackType = (categories && categories.length > 0 && categories[0]?.name) ? categories[0].name : 'General';
           const qType = (question.questionType && String(question.questionType).trim() !== '') ? question.questionType : fallbackType;
           const qOut = {
@@ -640,6 +677,13 @@ const FormBuilder = ({ onFormCreated, editFormData = null, disableAddQuestion = 
                                   onChange={(e) => updateSubQuestion(index, subIndex, { triggerValue: e.target.value })}
                                   style={{ flex: '1 1 220px' }}
                                 />
+                                <input
+                                  className="ui-input"
+                                  placeholder="Children (comma separated values to trigger its child questions)"
+                                  value={subQ.children || ''}
+                                  onChange={(e) => updateSubQuestion(index, subIndex, { children: e.target.value })}
+                                  style={{ flex: '1 1 320px' }}
+                                />
                               </div>
                             </div>
 
@@ -674,6 +718,33 @@ const FormBuilder = ({ onFormCreated, editFormData = null, disableAddQuestion = 
                                 <button type="button" className="insta-button" onClick={() => addSubQuestionOption(index, subIndex)}>Add Option</button>
                               </div>
                             )}
+                            
+                            {/* Child Validation Rules */}
+                            <div style={{ marginTop: 8 }}>
+                              <div style={{ fontWeight: 700, marginBottom: 6 }}>Validation Rules</div>
+                              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginBottom: 8 }}>
+                                {validatorTypes.map((vt) => {
+                                  const selected = (subQ.validator_options || []).includes(vt);
+                                  return (
+                                    <button
+                                      key={vt}
+                                      type="button"
+                                      className="insta-button"
+                                      style={{ background: selected ? 'var(--insta-primary)' : '#fff', color: selected ? '#fff' : 'var(--insta-primary)', border: '1px solid var(--insta-primary)' }}
+                                      onClick={() => {
+                                        const vopts = Array.isArray(subQ.validator_options) ? [...subQ.validator_options] : [];
+                                        const pos = vopts.indexOf(vt);
+                                        if (pos > -1) vopts.splice(pos, 1); else vopts.push(vt);
+                                        updateSubQuestion(index, subIndex, { validator_options: vopts });
+                                      }}
+                                    >
+                                      {vt}
+                                    </button>
+                                  );
+                                })}
+                              </div>
+                            </div>
+
                             {validatorTypes.map((vt) => {
                               const selected = (subQ.validator_options || []).includes(vt);
                               const numTypes = ['max','min','maxLength','minLength'];
@@ -748,6 +819,185 @@ const FormBuilder = ({ onFormCreated, editFormData = null, disableAddQuestion = 
                                 </div>
                               )}
                             </div>
+
+                            {/* Child's Child Questions (placed at end of child editor) */}
+                            {subQ.children && String(subQ.children).trim() !== '' && (
+                              <div style={{ marginTop: 10, padding: 12, border: '1px dashed var(--insta-border)', borderRadius: 8 }}>
+                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
+                                  <div style={{ fontWeight: 700 }}>Child's Child Questions</div>
+                                  <button type="button" className="insta-button" onClick={() => addNestedSubQuestion(index, subIndex)}>Add Child Question</button>
+                                </div>
+
+                                {(subQ.subQuestions || []).length === 0 ? (
+                                  <div style={{ fontSize: 12, color: 'var(--insta-muted)' }}>No child's child questions yet.</div>
+                                ) : (
+                                  <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                                    {subQ.subQuestions.map((gc, gcIndex) => (
+                                      <div key={gcIndex} style={{ padding: 10, border: '1px solid var(--insta-border)', borderRadius: 8, background: '#fff' }}>
+                                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
+                                          <div>
+                                            <div style={{ fontWeight: 600 }}>{gc.questionNumber ? `${gc.questionNumber}. ` : ''}{gc.question || 'Untitled'}</div>
+                                            <div style={{ fontSize: 12, color: 'var(--insta-muted)' }}>ID: {gc.questionId} | Type: {gc.option_type}{gc.triggerValue ? ` | Trigger: "${gc.triggerValue}"` : ''}</div>
+                                          </div>
+                                          <button type="button" className="insta-button" style={{ background: '#fff', color: 'var(--insta-red)', border: '1px solid var(--insta-red)' }} onClick={() => removeNestedSubQuestion(index, subIndex, gcIndex)}>Delete</button>
+                                        </div>
+
+                                        {/* Full field set for child's child */}
+                                        <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                                          <textarea className="ui-input" rows={2} placeholder="Child's Child Question Text" value={gc.question || ''} onChange={(e) => updateNestedSubQuestion(index, subIndex, gcIndex, { question: e.target.value })} />
+
+                                          <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                                            <input className="ui-input" placeholder="Child's Child Question Number (auto)" value={gc.questionNumber || ''} onChange={(e) => updateNestedSubQuestion(index, subIndex, gcIndex, { questionNumber: e.target.value })} style={{ flex: '1 1 160px' }} />
+                                            <input className="ui-input" placeholder="Child's Child Question ID" value={gc.questionId || ''} onChange={(e) => updateNestedSubQuestion(index, subIndex, gcIndex, { questionId: e.target.value })} style={{ flex: '1 1 220px' }} />
+
+                                            <div style={{ flex: '1 1 240px' }}>
+                                              <label className="ui-input-label" style={{ display: 'block', marginBottom: 4 }}>Category/Question Type</label>
+                                              <select className="ui-input" value={gc.questionType || (categories[0]?.name || '')} onChange={(e) => updateNestedSubQuestion(index, subIndex, gcIndex, { questionType: e.target.value })}>
+                                                {categories.map((cat) => (
+                                                  <option key={cat._id || cat.name} value={cat.name}>{cat.name}</option>
+                                                ))}
+                                              </select>
+                                            </div>
+
+                                            <div style={{ flex: '1 1 220px' }}>
+                                              <label className="ui-input-label" style={{ display: 'block', marginBottom: 4 }}>Option Type</label>
+                                              <select className="ui-input" value={gc.option_type || 'text'} onChange={(e) => updateNestedSubQuestion(index, subIndex, gcIndex, { option_type: e.target.value })}>
+                                                {fieldTypes.map((t) => (
+                                                  <option key={t.value} value={t.value}>{t.label}</option>
+                                                ))}
+                                              </select>
+                                            </div>
+
+                                            <input className="ui-input" placeholder="Trigger Value (optional)" value={gc.triggerValue || ''} onChange={(e) => updateNestedSubQuestion(index, subIndex, gcIndex, { triggerValue: e.target.value })} style={{ flex: '1 1 200px' }} />
+                                            <input className="ui-input" placeholder="Children (comma values to trigger next level)" value={gc.children || ''} onChange={(e) => updateNestedSubQuestion(index, subIndex, gcIndex, { children: e.target.value })} style={{ flex: '1 1 320px' }} />
+                                          </div>
+
+                                          {/* Options for child's child */}
+                                          {['select','radio','checkbox'].includes(gc.option_type) && (
+                                            <div style={{ marginTop: 8 }}>
+                                              <div style={{ fontWeight: 600, marginBottom: 6 }}>Options:</div>
+                                              {(gc.options || []).map((opt, optIndex) => (
+                                                <div key={optIndex} style={{ display: 'flex', gap: 8, alignItems: 'center', marginBottom: 8 }}>
+                                                  <input className="ui-input" placeholder={`Option key ${optIndex + 1}`} value={opt.key || ''} onChange={(e) => {
+                                                    const opts = [...(gc.options || [])];
+                                                    opts[optIndex] = { ...opts[optIndex], key: e.target.value };
+                                                    updateNestedSubQuestion(index, subIndex, gcIndex, { options: opts });
+                                                  }} style={{ flex: 1 }} />
+                                                  <input className="ui-input" placeholder={`Option value ${optIndex + 1}`} value={opt.val || ''} onChange={(e) => {
+                                                    const opts = [...(gc.options || [])];
+                                                    opts[optIndex] = { ...opts[optIndex], val: e.target.value };
+                                                    updateNestedSubQuestion(index, subIndex, gcIndex, { options: opts });
+                                                  }} style={{ flex: 1 }} />
+                                                  <button type="button" className="insta-button" style={{ background: '#fff', color: 'var(--insta-red)', border: '1px solid var(--insta-red)' }} onClick={() => {
+                                                    const opts = (gc.options || []).filter((_, i) => i !== optIndex);
+                                                    updateNestedSubQuestion(index, subIndex, gcIndex, { options: opts });
+                                                  }}>Delete</button>
+                                                </div>
+                                              ))}
+                                              <button type="button" className="insta-button" onClick={() => {
+                                                const opts = [...(gc.options || []), { key: '', val: '' }];
+                                                updateNestedSubQuestion(index, subIndex, gcIndex, { options: opts });
+                                              }}>Add Option</button>
+                                            </div>
+                                          )}
+
+                                          {/* Validators (same as child, disabled if not in validator_options) */}
+                                          {/* Child's Child Validation Rules */}
+                                          <div style={{ marginTop: 8 }}>
+                                            <div style={{ fontWeight: 700, marginBottom: 6 }}>Validation Rules</div>
+                                            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginBottom: 8 }}>
+                                              {validatorTypes.map((vt) => {
+                                                const selected = (gc.validator_options || []).includes(vt);
+                                                return (
+                                                  <button
+                                                    key={vt}
+                                                    type="button"
+                                                    className="insta-button"
+                                                    style={{ background: selected ? 'var(--insta-primary)' : '#fff', color: selected ? '#fff' : 'var(--insta-primary)', border: '1px solid var(--insta-primary)' }}
+                                                    onClick={() => {
+                                                      const vopts = Array.isArray(gc.validator_options) ? [...gc.validator_options] : [];
+                                                      const pos = vopts.indexOf(vt);
+                                                      if (pos > -1) vopts.splice(pos, 1); else vopts.push(vt);
+                                                      updateNestedSubQuestion(index, subIndex, gcIndex, { validator_options: vopts });
+                                                    }}
+                                                  >
+                                                    {vt}
+                                                  </button>
+                                                );
+                                              })}
+                                            </div>
+                                          </div>
+
+                                          {validatorTypes.map((vt) => {
+                                            const selected = (gc.validator_options || []).includes(vt);
+                                            const numTypes = ['max','min','maxLength','minLength'];
+                                            const valObj = gc.validator_values || {};
+                                            const msgObj = gc.error_messages || {};
+                                            return (
+                                              <div key={vt} style={{ marginBottom: 8 }}>
+                                                <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                                                  {vt === 'required' ? (
+                                                    <select className="ui-input" style={{ flex: '1 1 200px' }} disabled={!selected} value={(valObj?.[vt] === true || valObj?.[vt] === 'true') ? 'true' : 'false'} onChange={(e) => {
+                                                      const nextVals = { ...(gc.validator_values || {}) };
+                                                      nextVals[vt] = e.target.value === 'true';
+                                                      updateNestedSubQuestion(index, subIndex, gcIndex, { validator_values: nextVals });
+                                                    }}>
+                                                      <option value="true">true</option>
+                                                      <option value="false">false</option>
+                                                    </select>
+                                                  ) : (
+                                                    <input className="ui-input" style={{ flex: '1 1 200px' }} placeholder={`${vt} value`} disabled={!selected} value={valObj?.[vt] ?? ''} onChange={(e) => {
+                                                      const nextVals = { ...(gc.validator_values || {}) };
+                                                      nextVals[vt] = numTypes.includes(vt) ? e.target.value : e.target.value;
+                                                      updateNestedSubQuestion(index, subIndex, gcIndex, { validator_values: nextVals });
+                                                    }} type={numTypes.includes(vt) ? 'number' : 'text'} />
+                                                  )}
+                                                  <input className="ui-input" style={{ flex: '1 1 320px' }} placeholder={`${vt} error message`} disabled={!selected} value={msgObj?.[vt] ?? ''} onChange={(e) => {
+                                                    const nextMsgs = { ...(gc.error_messages || {}) };
+                                                    nextMsgs[vt] = e.target.value;
+                                                    updateNestedSubQuestion(index, subIndex, gcIndex, { error_messages: nextMsgs });
+                                                  }} />
+                                                </div>
+                                              </div>
+                                            );
+                                          })}
+
+                                          {/* List Items for child's child */}
+                                          <div style={{ marginTop: 6 }}>
+                                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
+                                              <div style={{ fontWeight: 600 }}>List Items</div>
+                                              <button type="button" className="insta-button" onClick={() => {
+                                                const list = [...(gc.listItems || []), ''];
+                                                updateNestedSubQuestion(index, subIndex, gcIndex, { listItems: list });
+                                              }}>Add List Item</button>
+                                            </div>
+                                            {(gc.listItems || []).length === 0 ? (
+                                              <div style={{ fontSize: 12, color: 'var(--insta-muted)' }}>No list items added.</div>
+                                            ) : (
+                                              <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                                                {(gc.listItems || []).map((li, liIdx) => (
+                                                  <div key={liIdx} style={{ display: 'flex', gap: 8, alignItems: 'flex-start' }}>
+                                                    <textarea className="ui-input" rows={2} placeholder={`List item ${liIdx + 1}`} value={li} onChange={(e) => {
+                                                      const list = [...(gc.listItems || [])];
+                                                      list[liIdx] = e.target.value;
+                                                      updateNestedSubQuestion(index, subIndex, gcIndex, { listItems: list });
+                                                    }} style={{ flex: 1 }} />
+                                                    <button type="button" className="insta-button" style={{ background: '#fff', color: 'var(--insta-red)', border: '1px solid var(--insta-red)' }} onClick={() => {
+                                                      const list = (gc.listItems || []).filter((_, i) => i !== liIdx);
+                                                      updateNestedSubQuestion(index, subIndex, gcIndex, { listItems: list });
+                                                    }}>Delete</button>
+                                                  </div>
+                                                ))}
+                                              </div>
+                                            )}
+                                          </div>
+                                        </div>
+                                      </div>
+                                    ))}
+                                  </div>
+                                )}
+                              </div>
+                            )}
                           </div>
                         ))}
                       </div>

@@ -94,6 +94,176 @@ const UserForm = ({ category: categoryProp, appNumber: appNumberProp, mobile: mo
     tryRestore();
   }, [category, appNumberProp, mobileProp, dispatch, navigate]);
 
+  // Helpers for recursive rendering and trigger matching
+  const normalize = (v) => (v === undefined || v === null) ? '' : String(v).trim().toLowerCase();
+  const splitTokens = (s) => String(s || '').split(',').map(t => t.trim().toLowerCase()).filter(Boolean);
+
+  const matchesTrigger = (parentValue, triggerValue, options = []) => {
+    if (!triggerValue) return true;
+    const tokens = Array.isArray(triggerValue) ? triggerValue.map(normalize) : splitTokens(triggerValue);
+    // Build a set of comparable strings from parent's current answer: include both val and key
+    const collectTokens = (val) => {
+      const out = new Set();
+      out.add(normalize(val));
+      const opt = (options || []).find(o => String(o?.val) === String(val));
+      if (opt && opt.key !== undefined) out.add(normalize(opt.key));
+      return out;
+    };
+    if (Array.isArray(parentValue)) {
+      const parentSets = parentValue.map(v => collectTokens(v));
+      return tokens.some(t => parentSets.some(set => set.has(t)));
+    }
+    const set = collectTokens(parentValue);
+    return tokens.some(t => set.has(t));
+  };
+
+  // Render a single node's field UI
+  const renderQuestion = (question) => {
+    const value = formData[question.questionId];
+    const isRequired = question.validator_values?.required || false;
+    const baseLabel = `${question.questionNumber ? question.questionNumber + '. ' : ''}${question.question || ''}`;
+    const afterLabel = (question.listItems && question.listItems.length > 0) ? (
+      <ol className="insta-numbered-list">
+        {question.listItems.map((it, i) => (
+          <li key={i} dangerouslySetInnerHTML={{ __html: it }} />
+        ))}
+      </ol>
+    ) : null;
+
+    switch (question.option_type) {
+      case 'text':
+      case 'email':
+      case 'number': {
+        const inputProps = {};
+        if (question.option_type === 'number') {
+          if (question.validators?.max?.value !== '' && question.validators?.max?.value !== null) inputProps.max = question.validators.max.value;
+          if (question.validators?.min?.value !== '' && question.validators?.min?.value !== null) inputProps.min = question.validators.min.value;
+        }
+        return (
+          <InputField
+            fullWidth
+            type={question.option_type}
+            label={baseLabel}
+            afterLabel={afterLabel}
+            name={question.questionId}
+            value={value}
+            onChange={(v) => handleInputChange(question.questionId, v)}
+            onBlur={() => handleFieldBlur(question)}
+            required={isRequired}
+            placeholder={question.placeholder || ''}
+            min={inputProps.min}
+            max={inputProps.max}
+            error={fieldErrors[question.questionId]}
+          />
+        );
+      }
+      case 'textarea':
+        return (
+          <TextAreaField
+            label={baseLabel}
+            afterLabel={afterLabel}
+            value={value}
+            onChange={(v) => handleInputChange(question.questionId, v)}
+            rows={4}
+            error={fieldErrors[question.questionId]}
+            placeholder={question.placeholder || ''}
+          />
+        );
+      case 'select':
+        return (
+          <SelectField
+            label={baseLabel}
+            afterLabel={afterLabel}
+            value={value}
+            onChange={(v) => handleInputChange(question.questionId, v)}
+            options={question.options || []}
+            error={fieldErrors[question.questionId]}
+            name={question.questionId}
+          />
+        );
+      case 'radio':
+        return (
+          <div className="ui-input-wrapper">
+            {baseLabel && (
+              typeof baseLabel === 'string' ? (
+                <label className="ui-input-label">{baseLabel}{isRequired ? ' *' : ''}</label>
+              ) : (
+                <div className="ui-input-label">{baseLabel}</div>
+              )
+            )}
+            {afterLabel}
+            <div className="insta-tabs" role="tablist" aria-label={typeof baseLabel === 'string' ? baseLabel : question.questionId}>
+              {question.options?.map((option, index) => (
+                <button
+                  type="button"
+                  key={index}
+                  className={`insta-tab ${value === option.val ? 'active' : ''}`}
+                  onClick={() => handleInputChange(question.questionId, option.val)}
+                  onBlur={() => handleFieldBlur(question)}
+                >
+                  {option.key}
+                </button>
+              ))}
+            </div>
+            {fieldErrors[question.questionId] && (
+              <div className="ui-input-error">{fieldErrors[question.questionId]}</div>
+            )}
+          </div>
+        );
+      case 'checkbox':
+        return (
+          <CheckboxGroup
+            label={baseLabel}
+            afterLabel={afterLabel}
+            value={value || []}
+            onChange={(v) => handleInputChange(question.questionId, v)}
+            options={question.options || []}
+            error={fieldErrors[question.questionId]}
+            name={question.questionId}
+          />
+        );
+      case 'date':
+        return (
+          <DateField
+            value={value}
+            onChange={(v) => handleInputChange(question.questionId, v)}
+          />
+        );
+      default:
+        return null;
+    }
+  };
+
+  const renderNode = (node) => {
+    const pv = formData[node.questionId];
+    const hasChildren = Array.isArray(node.subQuestions) && node.subQuestions.length > 0;
+    const childrenViaField = node.children ? matchesTrigger(pv, node.children, node.options || []) : false;
+    const anyChildMatches = hasChildren ? (node.subQuestions || []).some(sq => matchesTrigger(pv, sq?.triggerValue, node.options || [])) : false;
+    const parentAllowsChildren = childrenViaField || anyChildMatches;
+    return (
+      <div key={node.questionId || node.question} style={{ marginBottom: 8 }}>
+        <div
+          ref={el => { if (node.questionId) questionRefs.current[node.questionId] = el; }}
+          style={{
+            padding: 12,
+            border: fieldErrors[node.questionId] ? '2px solid #d32f2f' : '1px solid var(--insta-border)',
+            borderRadius: 8,
+            backgroundColor: fieldErrors[node.questionId] ? '#ffebee' : 'var(--insta-card-bg)'
+          }}
+        >
+          {renderQuestion(node)}
+        </div>
+        {(Array.isArray(node.subQuestions) ? node.subQuestions : [])
+          .filter(sq => parentAllowsChildren && matchesTrigger(pv, sq.triggerValue, node.options || []))
+          .map(sq => (
+            <div key={(sq.questionId || sq.question) + '-wrap'} style={{ marginLeft: 16 }}>
+              {renderNode(sq)}
+            </div>
+          ))}
+      </div>
+    );
+  };
+
   // No snackbar/toast; errors render under each field
 
   const handleInputChange = (fieldName, value) => {
@@ -216,27 +386,27 @@ const UserForm = ({ category: categoryProp, appNumber: appNumberProp, mobile: mo
     return null;
   };
 
-  const shouldShowSubQuestions = (question) => {
-    if (!question.subQuestions || question.subQuestions.length === 0) return false;
-    const parentValue = formData[question.questionId];
-    if (parentValue === undefined || parentValue === null || parentValue === '') return false;
-    const norm = (s) => (s === undefined || s === null) ? '' : String(s).trim().toLowerCase();
-    const pv = norm(parentValue);
-    const selected = (question.options || []).find(o => String(o?.val) === String(parentValue));
-    const pk = norm(selected?.key);
-    const anyChildMatches = (question.subQuestions || []).some((sq) => {
-      if (!sq || !sq.triggerValue) return false;
-      const tv = norm(sq.triggerValue);
-      return tv === pv;
-    });
-    if (anyChildMatches) return true;
-    const anyChildHasTrigger = (question.subQuestions || []).some((sq) => sq && sq.triggerValue);
-    if (!anyChildHasTrigger && question.children) {
-      const triggers = question.children.split(',').map(v => norm(v));
-      if (triggers.includes(pv) || triggers.includes(pk)) return true;
-    }
-    return false;
-  };
+  // const shouldShowSubQuestions = (question) => {
+  //   if (!question.subQuestions || question.subQuestions.length === 0) return false;
+  //   const parentValue = formData[question.questionId];
+  //   if (parentValue === undefined || parentValue === null || parentValue === '') return false;
+  //   const norm = (s) => (s === undefined || s === null) ? '' : String(s).trim().toLowerCase();
+  //   const pv = norm(parentValue);
+  //   const selected = (question.options || []).find(o => String(o?.val) === String(parentValue));
+  //   const pk = norm(selected?.key);
+  //   const anyChildMatches = (question.subQuestions || []).some((sq) => {
+  //     if (!sq || !sq.triggerValue) return false;
+  //     const tv = norm(sq.triggerValue);
+  //     return tv === pv;
+  //   });
+  //   if (anyChildMatches) return true;
+  //   const anyChildHasTrigger = (question.subQuestions || []).some((sq) => sq && sq.triggerValue);
+  //   if (!anyChildHasTrigger && question.children) {
+  //     const triggers = question.children.split(',').map(v => norm(v));
+  //     if (triggers.includes(pv) || triggers.includes(pk)) return true;
+  //   }
+  //   return false;
+  // };
 
   const sortQuestionsByNumber = (questions) => {
     return [...questions].sort((a, b) => {
@@ -260,24 +430,21 @@ const UserForm = ({ category: categoryProp, appNumber: appNumberProp, mobile: mo
   };
 
   const getAllQuestionsToValidate = () => {
-    const allQuestions = [];
-    questions.forEach(question => {
-      allQuestions.push(question);
-      if (shouldShowSubQuestions(question)) {
-        // Only include sub-questions that match the current trigger value
-        question.subQuestions.forEach(subQ => {
-          if (subQ.triggerValue) {
-            const parentValue = formData[question.questionId];
-            if (parentValue && parentValue.toString().toLowerCase() === subQ.triggerValue.toLowerCase()) {
-              allQuestions.push(subQ);
-            }
-          } else {
-            allQuestions.push(subQ);
+    const all = [];
+    const walk = (nodes, parentValue) => {
+      (nodes || []).forEach((n) => {
+        all.push(n);
+        const pv = formData[n.questionId];
+        const subs = Array.isArray(n.subQuestions) ? n.subQuestions : [];
+        subs.forEach((sq) => {
+          if (matchesTrigger(pv, sq.triggerValue)) {
+            walk([sq], pv);
           }
         });
-      }
-    });
-    return allQuestions;
+      });
+    };
+    walk(questions, null);
+    return all;
   };
 
   const validateAllQuestions = () => {
@@ -349,14 +516,15 @@ const UserForm = ({ category: categoryProp, appNumber: appNumberProp, mobile: mo
     try {
       // store raw answers in redux
       dispatch(setAllAnswers(draft.rawAnswers || draft.answers));
-      // Build answers array for save-progress
+      // Build answers array for save-progress (map all nodes recursively)
       const qMap = {};
-      (questions || []).forEach(q => {
-        if (q && q.questionId) qMap[q.questionId] = q.question;
-        if (q && Array.isArray(q.subQuestions)) {
-          q.subQuestions.forEach(sq => { if (sq && sq.questionId) qMap[sq.questionId] = sq.question; });
-        }
-      });
+      const walkMap = (nodes) => {
+        (nodes || []).forEach(n => {
+          if (n && n.questionId) qMap[n.questionId] = n.question;
+          if (Array.isArray(n.subQuestions)) walkMap(n.subQuestions);
+        });
+      };
+      walkMap(questions || []);
       const answersArray = Object.entries(draft.rawAnswers || draft.answers || {}).map(([questionId, answer]) => ({
         question: qMap[questionId] || questionId,
         answer,
@@ -368,140 +536,6 @@ const UserForm = ({ category: categoryProp, appNumber: appNumberProp, mobile: mo
     } catch (err) {
       console.error('Failed to prepare review', err);
       setError('Failed to prepare review. Please try again.');
-    }
-  };
-
-  const renderQuestion = (question, showNumber = true) => {
-    const value = formData[question.questionId] || '';
-    const isRequired = question.validator_values?.required || false;
-    const baseLabel = showNumber && question.questionNumber 
-      ? `${question.questionNumber}. ${question.question}` 
-      : question.question;
-
-    // If admin provided listItems (array), render them as an ordered list after the main label
-    const afterLabel = (question.listItems && question.listItems.length > 0) ? (
-      <ol className="insta-numbered-list">
-        {question.listItems.map((it, i) => (
-          <li key={i} dangerouslySetInnerHTML={{ __html: it }} />
-        ))}
-      </ol>
-    ) : null;
-    const labelText = baseLabel;
-
-    switch (question.option_type) {
-      case 'text':
-      case 'email':
-      case 'number':
-        const inputProps = {};
-        
-        if (question.option_type === 'number') {
-          if (question.validators?.max?.value !== '' && question.validators?.max?.value !== null) {
-            inputProps.max = question.validators.max.value;
-          }
-          if (question.validators?.min?.value !== '' && question.validators?.min?.value !== null) {
-            inputProps.min = question.validators.min.value;
-          }
-        }
-        
-        
-        
-        return (
-      <InputField
-        fullWidth
-        type={question.option_type}
-        label={labelText}
-        afterLabel={afterLabel}
-        name={question.questionId}
-        value={value}
-        onChange={(v) => handleInputChange(question.questionId, v)}
-        onBlur={() => handleFieldBlur(question)}
-        required={isRequired}
-        placeholder={question.placeholder || ''}
-        min={inputProps.min}
-        max={inputProps.max}
-        error={fieldErrors[question.questionId]}
-      />
-        );
-
-      case 'textarea':
-        return (
-          <TextAreaField
-            label={labelText}
-            afterLabel={afterLabel}
-            value={value}
-            onChange={(v) => handleInputChange(question.questionId, v)}
-            rows={4}
-            error={fieldErrors[question.questionId]}
-            placeholder={question.placeholder || ''}
-          />
-        );
-
-      case 'select':
-        return (
-          <SelectField
-            label={labelText}
-            afterLabel={afterLabel}
-            value={value}
-            onChange={(v) => handleInputChange(question.questionId, v)}
-            options={question.options || []}
-            error={fieldErrors[question.questionId]}
-            name={question.questionId}
-          />
-        );
-
-      case 'radio':
-        return (
-          <div className="ui-input-wrapper">
-            {labelText && (
-              typeof labelText === 'string' ? (
-                <label className="ui-input-label">{labelText}{isRequired ? ' *' : ''}</label>
-              ) : (
-                <div className="ui-input-label">{labelText}</div>
-              )
-            )}
-            {afterLabel}
-            <div className="insta-tabs" role="tablist" aria-label={typeof labelText === 'string' ? labelText : question.questionId}>
-              {question.options?.map((option, index) => (
-                <button
-                  type="button"
-                  key={index}
-                  className={`insta-tab ${value === option.val ? 'active' : ''}`}
-                  onClick={() => handleInputChange(question.questionId, option.val)}
-                  onBlur={() => handleFieldBlur(question)}
-                >
-                  {option.key}
-                </button>
-              ))}
-            </div>
-            {fieldErrors[question.questionId] && (
-              <div className="ui-input-error">{fieldErrors[question.questionId]}</div>
-            )}
-          </div>
-        );
-
-      case 'checkbox':
-        return (
-          <CheckboxGroup
-            label={labelText}
-            afterLabel={afterLabel}
-            value={value || []}
-            onChange={(v) => handleInputChange(question.questionId, v)}
-            options={question.options || []}
-            error={fieldErrors[question.questionId]}
-            name={question.questionId}
-          />
-        );
-
-      case 'date':
-        return (
-          <DateField
-            value={value}
-            onChange={(v) => handleInputChange(question.questionId, v)}
-          />
-        );
-
-      default:
-        return null;
     }
   };
 
@@ -588,71 +622,7 @@ const UserForm = ({ category: categoryProp, appNumber: appNumberProp, mobile: mo
         ) : (
           <form ref={formRef} onSubmit={handleSubmit} noValidate>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-              {sortQuestionsByNumber(questions).map((question, index) => (
-                <React.Fragment key={index}>
-                  <div 
-                    ref={el => questionRefs.current[question.questionId] = el}
-                    style={{ 
-                      padding: 16, 
-                      border: fieldErrors[question.questionId] ? '2px solid #d32f2f' : 'none', 
-                      borderBottom: fieldErrors[question.questionId] ? undefined : '1px solid var(--insta-border)',
-                      borderRadius: 8,
-                      backgroundColor: fieldErrors[question.questionId] ? '#ffebee' : 'var(--insta-card-bg)',
-                      boxShadow: fieldErrors[question.questionId] ? '0 1px 3px rgba(0,0,0,0.1)' : 'none',
-                      transition: 'all 0.3s ease'
-                    }}>
-                    <div>
-                      {renderQuestion(question)}
-                    </div>
-                  </div>
-                  
-                  {/* Render Sub-Questions */}
-                  {shouldShowSubQuestions(question) && (
-                    <div style={{ 
-                      marginLeft: 16,
-                      padding: 16, 
-                      border: `1px solid var(--insta-border)`,
-                      borderRadius: 8,
-                      backgroundColor: 'var(--insta-card-bg)',
-                      boxShadow: '0 1px 3px rgba(0,0,0,0.04)'
-                    }}>
-                      {/* Sub-questions header removed to match Instainsure styling */}
-                      <div className="insta-child" style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                        {question.subQuestions
-                          .filter(subQ => {
-                            // If triggerValue is set, only show if parent value matches
-                            if (subQ.triggerValue) {
-                              const parentValue = formData[question.questionId];
-                              return parentValue && parentValue.toString().toLowerCase() === subQ.triggerValue.toLowerCase();
-                            }
-                            // If no triggerValue, show for any parent value that triggers sub-questions
-                            return true;
-                          })
-                          .sort((a, b) => (a.order || 0) - (b.order || 0))
-                          .map((subQuestion, subIndex) => (
-                            <div 
-                              key={subIndex}
-                              ref={el => questionRefs.current[subQuestion.questionId] = el}
-                              style={{ 
-                                padding: 12, 
-                                border: fieldErrors[subQuestion.questionId] ? '2px solid #d32f2f' : '1px solid #90caf9', 
-                                borderRadius: 8,
-                                backgroundColor: fieldErrors[subQuestion.questionId] ? '#ffebee' : 'white',
-                                boxShadow: '0 1px 2px rgba(0,0,0,0.05)',
-                                transition: 'all 0.3s ease',
-                                marginBottom: 8
-                              }}
-                            >
-                              <div>
-                                {renderQuestion(subQuestion)}
-                              </div>
-                            </div>
-                          ))}
-                      </div>
-                    </div>
-                  )}
-                </React.Fragment>
-              ))}
+              {sortQuestionsByNumber(questions).map((question) => renderNode(question))}
             </div>
 
             {/* Desktop inline submit */}
