@@ -69,7 +69,7 @@ export function SelectField({label, afterLabel = null, value, onChange, options 
         >
           <option value="">Select</option>
           {options.map((opt, i) => (
-            <option key={i} value={opt.val}>{opt.val}</option>
+            <option key={i} value={opt.val}>{opt.key}</option>
           ))}
         </select>
       </div>

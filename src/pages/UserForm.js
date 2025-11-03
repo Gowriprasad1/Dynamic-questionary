@@ -592,7 +592,7 @@ const UserForm = ({ category: categoryProp, appNumber: appNumberProp, mobile: mo
           </div>
           <div>
             <div style={{ color: 'var(--insta-muted)', fontWeight: 600 }}>Step 3/3</div>
-            <div className="insta-header-title">Personal Declarations</div>
+            <div className="insta-header-title">Declarations Form</div>
             <div className="insta-header-sub">Read the questions below and select your answers</div>
             {reduxUser && (
               <div style={{ marginTop: 8 }}>

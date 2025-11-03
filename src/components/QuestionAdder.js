@@ -493,10 +493,10 @@ const QuestionAdder = ({ category, onQuestionAdded, onCancel }) => {
               onChange={(e) => updateOption(optionIndex, 'val', e.target.value)}
               style={{ flex: 1 }}
             />
-            <button className="insta-button" style={{ background: '#fff', color: 'var(--insta-red)', border: '1px solid var(--insta-red)' }} onClick={() => removeOption(optionIndex)}>Delete</button>
+            <button className="insta-button" type="button" style={{ background: '#fff', color: 'var(--insta-red)', border: '1px solid var(--insta-red)' }} onClick={() => removeOption(optionIndex)}>Delete</button>
           </div>
         ))}
-        <button className="insta-button" onClick={addOption}>Add Option</button>
+        <button className="insta-button" type="button" onClick={addOption}>Add Option</button>
       </div>
     );
   };
@@ -570,10 +570,10 @@ const QuestionAdder = ({ category, onQuestionAdded, onCancel }) => {
               onChange={(e) => updateSubQuestionOption(optionIndex, 'val', e.target.value)}
               style={{ flex: 1 }}
             />
-            <button className="insta-button" style={{ background: '#fff', color: 'var(--insta-red)', border: '1px solid var(--insta-red)' }} onClick={() => removeSubQuestionOption(optionIndex)}>Delete</button>
+            <button className="insta-button" type="button" style={{ background: '#fff', color: 'var(--insta-red)', border: '1px solid var(--insta-red)' }} onClick={() => removeSubQuestionOption(optionIndex)}>Delete</button>
           </div>
         ))}
-        <button className="insta-button" onClick={addSubQuestionOption}>Add Option</button>
+        <button className="insta-button" type="button" onClick={addSubQuestionOption}>Add Option</button>
       </div>
     );
   };
@@ -641,7 +641,7 @@ const QuestionAdder = ({ category, onQuestionAdded, onCancel }) => {
             <div style={{ fontWeight: 700, color: 'var(--insta-primary)' }}>Child Questions</div>
             <div style={{ fontSize: 12, color: 'var(--insta-muted)' }}>Possible trigger values: {question.children}</div>
           </div>
-          <button className="insta-button" onClick={addSubQuestion} disabled={showSubQuestionForm}>Add Child Question</button>
+          <button className="insta-button" type="button" onClick={addSubQuestion} disabled={showSubQuestionForm}>Add Child Question</button>
         </div>
 
         {/* List existing sub-questions */}
@@ -656,7 +656,7 @@ const QuestionAdder = ({ category, onQuestionAdded, onCancel }) => {
                     ID: {subQ.questionId} | Type: {subQ.option_type}{subQ.triggerValue ? ` | Trigger: "${subQ.triggerValue}"` : ''}
                   </div>
                 </div>
-                <button className="insta-button" style={{ background: '#fff', color: 'var(--insta-red)', border: '1px solid var(--insta-red)' }} onClick={() => removeSubQuestion(index)}>Delete</button>
+                <button className="insta-button" type="button" style={{ background: '#fff', color: 'var(--insta-red)', border: '1px solid var(--insta-red)' }} onClick={() => removeSubQuestion(index)}>Delete</button>
               </div>
             ))}
           </div>
@@ -844,8 +844,8 @@ const QuestionAdder = ({ category, onQuestionAdded, onCancel }) => {
               </div>
 
               <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8 }}>
-                <button className="insta-button" style={{ background: '#fff', color: 'var(--insta-primary)', border: '1px solid var(--insta-primary)' }} onClick={cancelSubQuestion}>Cancel</button>
-                <button className="insta-button" onClick={saveSubQuestion}>Save Child Question</button>
+                <button className="insta-button" type="button" style={{ background: '#fff', color: 'var(--insta-primary)', border: '1px solid var(--insta-primary)' }} onClick={cancelSubQuestion}>Cancel</button>
+                <button className="insta-button" type="button" onClick={saveSubQuestion}>Save Child Question</button>
               </div>
             </div>
           </div>
